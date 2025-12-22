@@ -1,8 +1,11 @@
 import './bootstrap';
 
-import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { RouterProvider } from 'react-router-dom';
+import router from './router/router'
 
-const App = () => <h1>Hello React + Laravel!</h1>;
+function App() {
+    return <RouterProvider router={router} />
+};
 
-ReactDOM.createRoot(document.getElementById('app')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
