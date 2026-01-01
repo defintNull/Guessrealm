@@ -1,8 +1,20 @@
 {
   "compilerOptions": {
+    "jsx": "react-jsx",
+
+    "allowJs": true,
+    "checkJs": false,
+
     "baseUrl": ".",
     "paths": {
       "@/*": ["resources/js/*"]
-    }
-  }
+    },
+
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["resources/**/*"]
 }
