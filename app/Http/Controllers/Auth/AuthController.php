@@ -43,6 +43,7 @@ class AuthController extends Controller
                                                     ->numbers()
                                                     ->symbols()
                                                 ],
+            'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'confirm_password' => ['required', 'string']
         ]);
 
@@ -51,16 +52,26 @@ class AuthController extends Controller
                 'errors' => [
                     'confirm_password' => "Password doesn't match!"
                     ]
-            ], 401);
+            ], 422);
         }
 
-        User::create([
+        $user_data = [
             'name' => $request->name,
             'surname' => $request->surname,
             'email' => $request->email,
             'username' => $request->username,
             'password' => $request->password
-        ]);
+        ];
+
+        if ($request->hasFile('profile_picture')) {
+            $file = $request->file('profile_picture');
+            $path = $file->storeAs('ProfilePictures', $request->username."_".$file->getClientOriginalName());
+
+            $user_data['profile_picture_path'] = $path;
+            $user_data['profile_picture_mime'] = $file->getClientMimeType();
+        }
+
+        User::create($user_data);
 
         return response()->json([
             'status' => 'OK'
