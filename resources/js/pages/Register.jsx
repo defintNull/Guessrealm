@@ -16,9 +16,12 @@ import {
   FieldTitle,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useAuth } from "@/context/AuthProvider";
 
 export default function Register() {
     let navigate = useNavigate();
+    const { setUser } = useAuth();
+
     const [name, setName] = useState("");
     const [surname, setSurname] = useState("");
     const [email, setEmail] = useState("");
@@ -52,11 +55,12 @@ export default function Register() {
         }
 
         try{
-            await axios.post('/register', form, {
+            let res = await axios.post('/register', form, {
                 headers: {
                 'Content-Type': 'multipart/form-data',
                 },
-            })
+            });
+            setUser(res.data.user);
             navigate("/");
         } catch (error) {
             if(error.response) {

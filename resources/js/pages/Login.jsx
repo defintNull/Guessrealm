@@ -16,10 +16,13 @@ import {
   FieldTitle,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import { useAuth } from "@/context/AuthProvider";
 
 
 export default function Login() {
     let navigate = useNavigate();
+    const { setUser } = useAuth();
+
     const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -29,10 +32,11 @@ export default function Login() {
 
         try{
             await axios.get('/sanctum/csrf-cookie');
-            await axios.post('/login', {
+            let res = await axios.post('/login', {
                 'username': username,
                 'password': password
             });
+            setUser(res.data.user);
             navigate("/");
         } catch (error) {
             if(error.response) {

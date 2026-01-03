@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
 use Symfony\Component\HttpFoundation\JsonResponse;
 
@@ -22,8 +23,17 @@ class AuthController extends Controller
             'password' => $request->password,
         ])) {
             $request->session()->regenerate();
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
             return response()->json([
-                'status' => 'OK'
+                'status' => 'OK',
+                'user' => $user->only([
+                    'id',
+                    'name',
+                    'surname',
+                    'username',
+                    'email',
+                ]),
             ], 200);
         }
 
@@ -71,10 +81,60 @@ class AuthController extends Controller
             $user_data['profile_picture_mime'] = $file->getClientMimeType();
         }
 
-        User::create($user_data);
+        $user = User::create($user_data);
+
+        return response()->json([
+            'status' => 'OK',
+            'user' => $user->only([
+                'id',
+                'name',
+                'surname',
+                'username',
+                'email',
+            ])
+        ], 200);
+    }
+
+    public function me() {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        return response()->json([
+            'status' => 'OK',
+            'user' => $user->only([
+                'id',
+                'name',
+                'surname',
+                'username',
+                'email',
+            ])
+        ], 200);
+    }
+
+    public function logout(Request $request) {
+        Auth::logout();
+
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return response()->json([
             'status' => 'OK'
         ], 200);
+    }
+
+    public function profilePicture() {
+        $user = Auth::user();
+
+        if (!$user || !$user->profile_picture_path) {
+            abort(404);
+        }
+
+        if (!Storage::disk('local')->exists($user->profile_picture_path)) {
+            abort(404);
+        }
+
+        return response()->file(
+            Storage::disk('local')->path($user->profile_picture_path)
+        );
     }
 }
