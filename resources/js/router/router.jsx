@@ -4,6 +4,7 @@ import DefaultLayout from "../layouts/DefaultLayout";
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import { GuestMiddleware } from "./middlewares/GuestMiddleware";
 
 
 const router = createBrowserRouter([
@@ -19,11 +20,19 @@ const router = createBrowserRouter([
     },
     {
         path: "/login",
-        Component: Login
+        element: (
+            <GuestMiddleware>
+                <Login />
+            </GuestMiddleware>
+        )
     },
     {
         path: "/register",
-        Component: Register
+        element: (
+            <GuestMiddleware>
+                <Register />
+            </GuestMiddleware>
+        )
     }
 ]);
 
