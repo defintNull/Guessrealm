@@ -5,6 +5,8 @@ import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import { GuestMiddleware } from "./middlewares/GuestMiddleware";
+import { AuthMiddleware } from "./middlewares/AuthMiddleware";
+import Singleplayer from "@/pages/Singleplayer";
 
 
 const router = createBrowserRouter([
@@ -15,6 +17,14 @@ const router = createBrowserRouter([
             {
                 index: true,
                 Component: Home
+            },
+            {
+                path: "/singleplayer",
+                element: (
+                    <AuthMiddleware>
+                        <Singleplayer />
+                    </AuthMiddleware>
+                )
             }
         ]
     },

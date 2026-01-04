@@ -23,7 +23,7 @@ export default function DefaultLayout() {
 
     async function logoutCallback() {
         try{
-            await axios.post('/logout');
+            await axios.post('/spa/logout');
             setUser(null);
         } catch (error) {
         }
@@ -31,7 +31,7 @@ export default function DefaultLayout() {
 
     return (
         <div className="flex flex-col w-full min-h-svh py-4 px-8">
-            <div className="flex justify-end pr-4 py-2">
+            <div className="flex justify-end pr-4 py-2 z-10">
                 <NavigationMenu>
                     {user ? (
                         <NavigationMenuItem className="md:block relative">
