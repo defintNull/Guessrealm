@@ -55,7 +55,7 @@ export default function Register() {
         }
 
         try{
-            let res = await axios.post('/register', form, {
+            let res = await axios.post('spa/register', form, {
                 headers: {
                 'Content-Type': 'multipart/form-data',
                 },

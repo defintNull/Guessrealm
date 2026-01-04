@@ -32,7 +32,7 @@ export default function Login() {
 
         try{
             await axios.get('/sanctum/csrf-cookie');
-            let res = await axios.post('/login', {
+            let res = await axios.post('spa/login', {
                 'username': username,
                 'password': password
             });
