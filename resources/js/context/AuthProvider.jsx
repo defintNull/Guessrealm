@@ -7,7 +7,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    axios.get('/me')
+    axios.get('/spa/me')
         .then(res => setUser(res.data.user))
         .catch(() => setUser(null))
         .finally(() => setLoading(false))
