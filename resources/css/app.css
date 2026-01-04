@@ -13,6 +13,14 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+@font-face {
+    font-family: "Chewy";
+    src: url("../../public/fonts/Chewy-Regular.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+}
+
+
 @theme inline {
     --radius-sm: calc(var(--radius) - 4px);
     --radius-md: calc(var(--radius) - 2px);
