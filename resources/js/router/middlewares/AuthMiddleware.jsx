@@ -8,5 +8,5 @@ export function AuthMiddleware({ children }) {
         return children;
     }
 
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
 }
