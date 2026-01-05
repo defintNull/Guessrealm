@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "./ui/card";
 
-export default function Foto({ src, alt = "", className = "" }) {
+export default function Photo({ src, alt = "", className = "" }) {
     const [loaded, setLoaded] = useState(false);
 
     return (

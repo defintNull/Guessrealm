@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Foto;
+use App\Models\Photo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
-class FotoController extends Controller
+class PhotoController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
     public function index() : JsonResponse
     {
-        $fotos = Foto::select('id')->inRandomOrder()->limit(24)->get();
+        $fotos = Photo::select('id')->inRandomOrder()->limit(24)->get();
 
         return response()->json([
-            'fotos' => $fotos,
+            'photos' => $fotos,
         ], 200);
     }
 
@@ -34,7 +34,7 @@ class FotoController extends Controller
      */
     public function show(string $id)
     {
-        $foto = Foto::where('id', $id)->get();
+        $foto = Photo::where('id', $id)->get();
 
         if(!$foto->isEmpty()) {
             $foto = $foto[0];

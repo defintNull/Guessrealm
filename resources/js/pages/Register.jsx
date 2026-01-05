@@ -60,8 +60,7 @@ export default function Register() {
                 'Content-Type': 'multipart/form-data',
                 },
             });
-            setUser(res.data.user);
-            navigate("/");
+            navigate("/login");
         } catch (error) {
             if(error.response) {
                 if(error.response.status == 429) {

@@ -36,7 +36,7 @@ export default function DefaultLayout() {
                     {user ? (
                         <NavigationMenuItem className="md:block relative">
                             <Avatar className="h-10 w-10 cursor-pointer hover:shadow-lg transition-shadow" onClick={avatarOnClick}>
-                                <AvatarImage src="/profilepicture" />
+                                <AvatarImage src="/spa/profilepicture" />
                                 <AvatarFallback>{(user.name[0] + user.surname[0]).toUpperCase()}</AvatarFallback>
                             </Avatar>
                             <Card className={`px-1 py-2 mt-2 min-w-fit absolute left-0 right-0 ${!menuOpen && "hidden"}`}>
