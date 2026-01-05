@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Photo;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -61,6 +62,13 @@ class DatabaseSeeder extends Seeder
         ]);
 
         //User::factory(46)->create();
+
+        for ($i = 1; $i <= 50; $i++) {
+            Photo::factory()->create([
+                'path' => sprintf('GamePhotos/%06d.png', $i)
+            ]);
+}
+
 
     }
 }
