@@ -7,6 +7,7 @@ import Register from "@/pages/Register";
 import { GuestMiddleware } from "./middlewares/GuestMiddleware";
 import { AuthMiddleware } from "./middlewares/AuthMiddleware";
 import Singleplayer from "@/pages/Singleplayer";
+import Profile from "@/pages/Profile";
 
 
 const router = createBrowserRouter([
@@ -42,6 +43,14 @@ const router = createBrowserRouter([
             <GuestMiddleware>
                 <Register />
             </GuestMiddleware>
+        )
+    },
+    {
+        path: "/profile",
+        element : (
+            <AuthMiddleware>
+                <Profile />
+            </AuthMiddleware>
         )
     }
 ]);
