@@ -1,4 +1,5 @@
 import Photo from '@/components/Photo';
+import SideChat from '@/components/SideChat';
 import { Card } from '@/components/ui/card';
 import axios from 'axios'
 import { useEffect, useState } from 'react'
@@ -13,10 +14,15 @@ export default function Singleplayer() {
     }, [])
 
     return <div>
-        <div className="grid grid-cols-6 grid-rows-4 h-svh">
-            {photos.map(el => {
-                return <Photo key={el.id} src={el.path} />
-            })}
+        <div className="flex flex-row h-svh">
+            <div className="w-1/6 h-full">
+                <SideChat />
+            </div>
+            <div className="grid grid-cols-6 grid-rows-4">
+                {photos.map(el => {
+                    return <Photo key={el.id} src={el.path} />
+                })}
+            </div>
         </div>
     </div>
 }

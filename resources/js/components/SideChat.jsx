@@ -1,0 +1,53 @@
+import ColoredText, { TextColor } from "./ColoredText";
+import { Card, CardHeader, CardTitle } from "./ui/card";
+import { ScrollArea } from "./ui/scroll-area";
+import { Textarea } from "./ui/textarea";
+import { useState } from "react";
+
+export default function SideChat() {
+  const [messages, setMessages] = useState([]);
+
+  const textareaSubmit = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+
+      const value = e.target.value.trim();
+      if (!value) return;
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+          color: TextColor.GREEN,
+          text: value,
+        },
+      ]);
+
+      e.target.value = "";
+    }
+  };
+
+  return (
+    <Card className="h-full flex flex-col overflow-hidden">
+      <CardHeader>
+        <CardTitle>Chat</CardTitle>
+      </CardHeader>
+
+      <ScrollArea className="px-4 flex-1">
+        {messages.map((el) => (
+          <ColoredText color={el.color} key={el.id} className="py-0.5">
+            {el.text}
+          </ColoredText>
+        ))}
+      </ScrollArea>
+
+      <div className="px-1">
+        <Textarea
+          className="resize-none"
+          onKeyDown={textareaSubmit}
+          placeholder="Scrivi un messaggio..."
+        />
+      </div>
+    </Card>
+  );
+}
