@@ -31,6 +31,10 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->withoutMiddleware([SPAMiddleware::class])
             ->name('profile_picture');
 
+        Route::get('/profile', [AuthController::class, 'profile'])
+            ->withoutMiddleware([SPAMiddleware::class])
+            ->name('profile');
+
         Route::name('game.')->prefix('game')->group(function() {
             Route::post('photos', [PhotoController::class, 'index'])
                 ->name('photos');
