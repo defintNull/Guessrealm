@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\FotoController;
+use App\Http\Controllers\PhotoController;
 use App\Http\Middleware\SPAMiddleware;
 use Illuminate\Support\Facades\Route;
 
@@ -28,14 +28,15 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->name('logout');
 
         Route::get('/profilepicture', [AuthController::class, 'profilePicture'])
+            ->withoutMiddleware([SPAMiddleware::class])
             ->name('profile_picture');
 
         Route::name('game.')->prefix('game')->group(function() {
-            Route::post('fotos', [FotoController::class, 'index'])
-                ->name('fotos');
-            Route::get('foto/show/{id}', [FotoController::class, 'show'])
+            Route::post('photos', [PhotoController::class, 'index'])
+                ->name('photos');
+            Route::get('photo/show/{id}', [PhotoController::class, 'show'])
                 ->withoutMiddleware([SPAMiddleware::class])
-                ->name('foto.show');
+                ->name('photo.show');
         });
     });
 });
