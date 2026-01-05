@@ -20,8 +20,6 @@ class DatabaseSeeder extends Seeder
         //php artisan migrate:fresh --seed
         //droppa tutto,remigra e riesegue i seeder
 
-
-
         //utente Andrea Luca Di Simone id = 1
         User::factory()->create([
             'name' => 'Andrea Luca',

@@ -6,7 +6,7 @@ import { Accordion,
         } from "@/components/ui/accordion";
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import InfoOverlay from "@/components/ui/InfoOverlay";
+import InfoOverlay from "@/components/InfoOverlay";
 
 
 export default function Home() {
