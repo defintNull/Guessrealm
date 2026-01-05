@@ -28,7 +28,7 @@ export default function SideChat() {
   };
 
   return (
-    <Card className="h-full flex flex-col overflow-hidden">
+    <Card className="h-full flex flex-col pb-2 overflow-hidden">
       <CardHeader>
         <CardTitle>Chat</CardTitle>
       </CardHeader>
