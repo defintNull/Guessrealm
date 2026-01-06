@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Middleware\SPAMiddleware;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ProfileController;
 
 Route::get('/', function () {
     return view('App');
@@ -34,6 +35,9 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
         Route::get('/profile', [AuthController::class, 'profile'])
             ->withoutMiddleware([SPAMiddleware::class])
             ->name('profile');
+
+        Route::post('/profileUpdate', [ProfileController::class, 'update'])
+            ->name('profile_update');
 
         Route::name('game.')->prefix('game')->group(function() {
             Route::post('photos', [PhotoController::class, 'index'])

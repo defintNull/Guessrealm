@@ -21,7 +21,7 @@ import { useAuth } from "@/context/AuthProvider";
 
 export default function Profile() {
     let navigate = useNavigate();
-    const { setUser } = useAuth();
+    const { user, setUser } = useAuth();
 
     const [name, setName] = useState();
     const [surname, setSurname] = useState("");
@@ -39,23 +39,14 @@ export default function Profile() {
     //const [error_confirm_password, setErrorConfirmPassword] = useState([]);
     const [error, setError] = useState([]);
 
-    //funzione per prendere i dati del profilo
-    const fetchProfileData = async () => {
-        //fetch user profile data dal backend
-        const response = await axios.get("/api/profile");
-        const data = response.data;
-        setName(data.name);
-        setSurname(data.surname);
-        setEmail(data.email);
-        setUsername(data.username);
-        //setProfilePicture(data.profile_picture);
-    };
-
-    //per recuperare i dati dal backend
     useEffect(() => {
-        //fetch i dati del profilo
-        fetchProfileData();
-    }, []);
+        if (user) {
+            setName(user.name ?? "");
+            setSurname(user.surname ?? "");
+            setEmail(user.email ?? "");
+            setUsername(user.username ?? "");
+        }
+    }, [user]);
 
     async function handleSubmit(event) {
         event.preventDefault();
@@ -74,12 +65,18 @@ export default function Profile() {
         }
 
         try {
-            let res = await axios.post("/api/profile", form, {
+            let res = await axios.post("spa/profileUpdate", form, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                 },
             });
-            navigate("/");
+
+            //aggiorna user nel context
+            setUser(res.data.user);
+
+            // mostra messaggio di successo
+            
+
         } catch (error) {
             if (error.response) {
                 if (error.response.status == 429) {
@@ -151,7 +148,7 @@ export default function Profile() {
                     <form onSubmit={handleSubmit}>
                         <FieldGroup>
                             <FieldTitle className="text-xl font-semibold">
-                                Register
+                                Edit Profile
                             </FieldTitle>
                             <Field data-invalid={error_name.length > 0}>
                                 <FieldLabel>Name</FieldLabel>
@@ -187,7 +184,7 @@ export default function Profile() {
                                 ></Input>
                                 <FieldError errors={error_email} />
                             </Field>
-                            <Field
+                            {/* <Field
                                 data-invalid={error_profile_picture.length > 0}
                             >
                                 <FieldLabel>Profile Picture</FieldLabel>
@@ -207,8 +204,8 @@ export default function Profile() {
                                     Allowed types: jpeg, png, webp
                                 </FieldDescription>
                                 <FieldError errors={error_profile_picture} />
-                            </Field>
-                            <FieldSeparator></FieldSeparator>
+                            </Field> */}
+                            {/* <FieldSeparator></FieldSeparator> */}
                             <Field data-invalid={error_username.length > 0}>
                                 <FieldLabel>Userame</FieldLabel>
                                 <Input
