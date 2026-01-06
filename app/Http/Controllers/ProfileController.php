@@ -6,11 +6,6 @@ use Illuminate\Http\Request;
 
 class ProfileController extends Controller
 {
-    //
-    public function show(Request $request)
-    {
-        return $request->user()->only(['id', 'name', 'surname', 'username', 'email']);
-    }
 
     public function update(Request $request)
     {

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthProvider";
+import { toast } from "sonner";
 
 export default function Profile() {
     let navigate = useNavigate();
@@ -28,15 +29,11 @@ export default function Profile() {
     const [email, setEmail] = useState("");
     const [profile_picture, setProfilePicture] = useState(null);
     const [username, setUsername] = useState("");
-    //const [password, setPassword] = useState("");
-    //const [confirm_password, setConfirmPassword] = useState("");
     const [error_name, setErrorName] = useState([]);
     const [error_surname, setErrorSurname] = useState([]);
     const [error_email, setErrorEmail] = useState([]);
     const [error_profile_picture, setErrorProfilePicture] = useState([]);
     const [error_username, setErrorUsername] = useState([]);
-    //const [error_password, setErrorPassword] = useState([]);
-    //const [error_confirm_password, setErrorConfirmPassword] = useState([]);
     const [error, setError] = useState([]);
 
     useEffect(() => {
@@ -57,8 +54,6 @@ export default function Profile() {
         form.append("surname", surname);
         form.append("email", email);
         form.append("username", username);
-        //form.append('password', password);
-        //form.append('confirm_password', confirm_password);
 
         if (profile_picture) {
             form.append("profile_picture", profile_picture);
@@ -75,7 +70,7 @@ export default function Profile() {
             setUser(res.data.user);
 
             // mostra messaggio di successo
-            
+            toast.success("Profile updated successfully!");
 
         } catch (error) {
             if (error.response) {
@@ -184,28 +179,6 @@ export default function Profile() {
                                 ></Input>
                                 <FieldError errors={error_email} />
                             </Field>
-                            {/* <Field
-                                data-invalid={error_profile_picture.length > 0}
-                            >
-                                <FieldLabel>Profile Picture</FieldLabel>
-                                <Input
-                                    accept="image/png,image/jpeg,image/webp"
-                                    onChange={(e) => {
-                                        const file =
-                                            e.target.files?.[0] ?? null;
-                                        setProfilePicture(file);
-                                    }}
-                                    aria-invalid={
-                                        error_profile_picture.length > 0
-                                    }
-                                    type="file"
-                                ></Input>
-                                <FieldDescription>
-                                    Allowed types: jpeg, png, webp
-                                </FieldDescription>
-                                <FieldError errors={error_profile_picture} />
-                            </Field> */}
-                            {/* <FieldSeparator></FieldSeparator> */}
                             <Field data-invalid={error_username.length > 0}>
                                 <FieldLabel>Userame</FieldLabel>
                                 <Input
@@ -219,38 +192,6 @@ export default function Profile() {
                                 ></Input>
                                 <FieldError errors={error_username} />
                             </Field>
-                            {/* <Field data-invalid={error_password.length > 0}>
-                            <FieldLabel>Password</FieldLabel>
-                            <Input
-                                placeholder="Password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                aria-invalid={error_password.length > 0}
-                                type="password"
-                                ></Input>
-                            <FieldError errors={error_password} />
-                        </Field>
-                        <Field data-invalid={error_confirm_password.length > 0}>
-                            <FieldLabel>Confirm password</FieldLabel>
-                            <Input
-                                placeholder="Confirm password"
-                                required
-                                value={confirm_password}
-                                onChange={(e) => {
-                                    let current_psw = e.target.value;
-                                    setConfirmPassword(current_psw);
-                                    if(current_psw == "" || current_psw == password) {
-                                        setErrorConfirmPassword([]);
-                                    } else if(current_psw != password) {
-                                        setErrorConfirmPassword([{ message: "Password doesn't match!" }]);
-                                    }
-                                }}
-                                aria-invalid={error_confirm_password.length > 0}
-                                type="password"
-                                ></Input>
-                            <FieldError errors={error_confirm_password} />
-                        </Field> */}
                             <FieldError errors={error} />
                         </FieldGroup>
                         <div className="flex flex-col w-full items-end justify-center pt-6 pr-4">
