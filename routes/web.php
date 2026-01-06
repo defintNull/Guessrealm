@@ -36,6 +36,12 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->withoutMiddleware([SPAMiddleware::class])
             ->name('profile');
 
+        Route::get('/checkEditUsername/{username}', [ProfileController::class, 'checkEditUsername'])
+            ->name('check_edit_username');
+        
+        Route::get('/checkEditEmail/{email}', [ProfileController::class, 'checkEditEmail'])
+            ->name('check_edit_email');
+
         Route::post('/profileUpdate', [ProfileController::class, 'update'])
             ->name('profile_update');
 
