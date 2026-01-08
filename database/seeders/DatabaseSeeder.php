@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'username' => 'andrealuca.disimone',
             'password' => bcrypt('guessrealm'),
+            'theme' => 'dark',
         ]);
 
         //utente Lorenzo D'Angelo id = 2
@@ -39,6 +40,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'username' => 'lorenzo.dangelo',
             'password' => bcrypt('guessrealm'),
+            'theme' => 'dark',
         ]);
 
         //utente Andrea iannotti  id = 3
@@ -49,6 +51,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'username' => 'andrea.iannotti',
             'password' => bcrypt('guessrealm'),
+            'theme' => 'light',
         ]);
 
         //utente prof Serafino Cicerone id = 4
@@ -59,6 +62,7 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
             'username' => 'serafino.cicerone',
             'password' => bcrypt('frontend!'),
+            'theme' => 'system',
         ]);
 
         //User::factory(46)->create();
