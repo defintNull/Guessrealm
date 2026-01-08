@@ -22,10 +22,15 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthProvider";
 import { toast } from "sonner";
 import useDebounce from "@/hooks/useDebounce";
+import { useTheme } from "@/context/ThemeProvider";
 
 export default function Profile() {
+
+    //Inizializzazione stato 
+    // #region contesti, stati e custom hooks
     let navigate = useNavigate();
     const { user, setUser, updateUserTheme } = useAuth();
+    const { theme, setTheme } = useTheme();
 
     const [name, setName] = useState("");
     const [surname, setSurname] = useState("");
@@ -40,10 +45,11 @@ export default function Profile() {
     const [error, setError] = useState([]);
     const [isCheckingUsername, setIsCheckingUsername] = useState(false);
     const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-    const [theme, setTheme] = useState("");
+    //const [theme, setTheme] = useState("");
 
     const debouncedUsername = useDebounce(username, 500);
     const debouncedEmail = useDebounce(email, 500);
+    // #endregion
 
     // Carica i dati dell'utente quando il componente viene montato
     useEffect(() => {
@@ -230,9 +236,7 @@ export default function Profile() {
 
     const handleThemeChange = (value) => {
         setTheme(value);
-        //aggiorna il tema nell'utente del context
-        updateUserTheme(value);
-        console.log(value);
+        //todo da inserire aggiornamento del backend
     };
 
     return (

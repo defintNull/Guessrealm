@@ -4,8 +4,8 @@ import { AuthProvider } from "./context/AuthProvider";
 
 export default function App() {
     return (
-            <AuthProvider>
-                <RouterProvider router={router}></RouterProvider>
-            </AuthProvider>
+        <AuthProvider>
+            <RouterProvider router={router}></RouterProvider>
+        </AuthProvider>
     );
 }
