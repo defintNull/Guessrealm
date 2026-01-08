@@ -17,7 +17,13 @@ import {
     FieldSet,
     FieldTitle,
 } from "@/components/ui/field";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthProvider";
 import { toast } from "sonner";
@@ -25,11 +31,10 @@ import useDebounce from "@/hooks/useDebounce";
 import { useTheme } from "@/context/ThemeProvider";
 
 export default function Profile() {
-
-    //Inizializzazione stato 
+    //Inizializzazione stato
     // #region contesti, stati e custom hooks
     let navigate = useNavigate();
-    const { user, setUser, updateUserTheme } = useAuth();
+    const { user, setUser } = useAuth();
     const { theme, setTheme } = useTheme();
 
     const [name, setName] = useState("");
@@ -45,7 +50,6 @@ export default function Profile() {
     const [error, setError] = useState([]);
     const [isCheckingUsername, setIsCheckingUsername] = useState(false);
     const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-    //const [theme, setTheme] = useState("");
 
     const debouncedUsername = useDebounce(username, 500);
     const debouncedEmail = useDebounce(email, 500);
@@ -58,7 +62,7 @@ export default function Profile() {
             setSurname(user.surname ?? "");
             setEmail(user.email ?? "");
             setUsername(user.username ?? "");
-            //setTheme(user.theme ?? "system");
+            setTheme(user.theme || "system");
         }
     }, [user]);
 
@@ -114,7 +118,7 @@ export default function Profile() {
         form.append("surname", surname);
         form.append("email", email);
         form.append("username", username);
-        //todo aggungi theme quando il backend sarà pronto
+        form.append("theme", theme)
 
         if (profile_picture) {
             form.append("profile_picture", profile_picture);
@@ -129,6 +133,9 @@ export default function Profile() {
 
             //aggiorna user nel context
             setUser(res.data.user);
+
+            //aggiornamento del tema
+            setTheme(theme);
 
             // mostra messaggio di successo
             toast.success("Profile updated successfully!");
@@ -234,10 +241,6 @@ export default function Profile() {
         }
     };
 
-    const handleThemeChange = (value) => {
-        setTheme(value);
-        //todo da inserire aggiornamento del backend
-    };
 
     return (
         <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
@@ -276,7 +279,7 @@ export default function Profile() {
                                 <FieldLabel>Theme</FieldLabel>
                                 <Select
                                     value={theme}
-                                    onValueChange={handleThemeChange}
+                                    onValueChange={(value) => {setTheme(value)}}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a theme" />

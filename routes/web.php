@@ -25,6 +25,9 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
         Route::get("/me", [AuthController::class, 'me'])
             ->name('me');
 
+        Route::post('/updateTheme', [ProfileController::class, 'updateTheme'])
+            ->name('updateTheme');
+
         Route::post('/logout', [AuthController::class, 'logout'])
             ->name('logout');
 

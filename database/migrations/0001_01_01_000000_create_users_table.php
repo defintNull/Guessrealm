@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string('password');
             $table->string('profile_picture_path')->nullable();
             $table->string('profile_picture_mime')->nullable();
+            $table->enum('theme', ['system', 'light', 'dark'])->default('system');
             $table->rememberToken();
             $table->timestamps();
         });
