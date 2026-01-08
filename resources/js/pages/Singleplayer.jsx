@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import axios from 'axios'
 import { useEffect, useState, useRef } from 'react'
 import { IoIosSettings } from "react-icons/io";
+import { IoPerson } from "react-icons/io5";
 
 import {
   Command,
@@ -54,12 +55,16 @@ import { TextColor } from '@/components/ColoredText';
 import { ImCross } from 'react-icons/im';
 import { ImCheckmark } from "react-icons/im";
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthProvider';
+import { botChooseCharacter, botAskQuestion, botQuestionResponse, botRegisterResponse, botChooseIfGuess, botGuess } from '@/services/BOT';
 
 export default function Singleplayer() {
+    const { user } = useAuth();
     const navigate = useNavigate();
     // Game states
     const [ gameState, setGameState ] = useState(0);
     const [ photos, setPhotos ] = useState([]);
+    const [ botPhotos, setBotPhotos ] = useState([]);
     const [ endGame, setEndGame ] = useState(false);
 
     const [ photoSelected, setPhotoSelected ] = useState([]);
@@ -75,8 +80,11 @@ export default function Singleplayer() {
     const [ response, setResponse ] = useState(false);
 
     // Settings
-    const [ difficuty, setDifficulty ] = useState("medium");
+    const [ difficulty, setDifficulty ] = useState(1);
     const [ aiHelp, setAiHelp ] = useState("on");
+
+    // Enable Guess
+    const [ enableGuess, setEnableGuess ] = useState(false);
 
     // Dialog state
     const [ dialogState, setDialogState ] = useState(false);
@@ -101,28 +109,49 @@ export default function Singleplayer() {
     // Click photo mode
     const [ mode, setMode ] = useState(0);
 
+    // Preprocessing
     useEffect(() => {
         // Foto loading
         (async () => {
             let res = await axios.post("/spa/game/photos");
-            setPhotos(res.data?.photos.map(el => {
+            let photosArray = res.data?.photos.map(el => {
                     return {
                         id:el?.id,
                         path:"/spa/game/photo/show/" + el?.id,
+                        data: [],
+                        questions: [],
                         state: false,
                     }
                 }
-            ));
-        })();
+            );
+            let botPhotosArray = photosArray.map(p => ({ ...p }));
+            setPhotos(photosArray);
+            setBotPhotos(botPhotosArray);
 
-        // Set questions
-        let questionsArray = Questions().map((el, index) => {
-            return {
-                id: index,
-                text: el
-            }
-        });
-        setQuestions(questionsArray);
+            // Set questions
+            let questionsArray = Questions().map((el, index) => {
+                return {
+                    id: index,
+                    text: el
+                }
+            });
+            setQuestions(questionsArray);
+
+            // AI MODEL CODE
+            (async () => {
+                photosArray = photosArray.map(photo => ({
+                    ...photo,
+                    questions: questionsArray.map(q => ({
+                        id: q.id,
+                        response: Math.random() < 0.5,
+                        affidability: 0.5
+                    }))
+                }));
+                botPhotosArray = photosArray.map(p => ({ ...p }));
+                setPhotos(photosArray);
+                setBotPhotos(botPhotosArray);
+            })();
+        })();
 
         // Command list handle click
         function handleClickOutside(e) {
@@ -149,7 +178,7 @@ export default function Singleplayer() {
             {
                 id: prev.length ? prev[prev.length - 1].id + 1 : 1,
                 color: TextColor.GREEN,
-                text: "[Player]: Asking \"" + chosenQuestion.text + "\"",
+                text: "[" + user?.username + "]: Asking: \"" + chosenQuestion.text + "\"",
             },
         ]);
         setGameState(3);
@@ -181,8 +210,12 @@ export default function Singleplayer() {
                       text: "[System]: Player choosing character...",
                     },
                 ]);
+
+            // BOT
+            setBotPhotoSelected(botChooseCharacter(botPhotos));
         } else if(gameState == 2) {
             // Command selection phase
+            setEnableGuess(true);
             setMessages((prev) => [
                     ...prev,
                     {
@@ -198,8 +231,18 @@ export default function Singleplayer() {
             setAwaitResponse(true);
             setAskQuestionDialogState(true);
 
-            (() => {
-                // CODICE PER FAR RISPONDERE IL BOT
+            (async () => {
+                // BOT
+                let res = await botQuestionResponse(botPhotoSelected, currentQuestion);
+                setResponse(res);
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                      id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                      color: TextColor.RED,
+                      text: "[BOT]: Response: \"" + res + "\"",
+                    },
+                ]);
                 setAwaitResponse(false);
             })();
         } else if(gameState == 4) {
@@ -207,12 +250,34 @@ export default function Singleplayer() {
             setCommandBlockVisibility(false);
             setAskQuestionDialogState(false);
 
+            setCurrentQuestion(null);
+            setResponse(null);
+
             setContentResponseQuestionDialog("Waiting for a question from the other player...");
             setAwaitResponse(true);
             setResponseQuestionDialogState(true);
 
-            (() => {
-                // CODICE PER FAR RISPONDERE IL BOT
+            (async () => {
+                // BOT
+                let choice = await botChooseIfGuess(botPhotos, difficulty);
+                if(choice) {
+                    let guess = await botGuess(botPhotos, difficulty);
+                    setBotPhotoTargetSelected(guess);
+                    setGameState(7);
+                    return;
+                }
+
+                let res = await botAskQuestion(botPhotos, difficulty, questions);
+                setCurrentQuestion(res);
+                setContentResponseQuestionDialog(res?.text);
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                      id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                      color: TextColor.RED,
+                      text: "[BOT]: Asking: \"" + res?.text + "\"",
+                    },
+                ]);
                 setAwaitResponse(false);
             })();
         } else if(gameState == 5) {
@@ -224,10 +289,18 @@ export default function Singleplayer() {
                 {
                     id: prev.length ? prev[prev.length - 1].id + 1 : 1,
                     color: TextColor.GREEN,
-                    text: "[Player]: Response: " + response,
+                    text: "[" + user?.username + "]: Response: " + response,
                 },
             ]);
+
+            (async () => {
+                let res = await botRegisterResponse(botPhotos, currentQuestion, response);
+                setBotPhotos(res);
+            })();
+
             setResponseQuestionDialogState(false);
+            setCurrentQuestion(null);
+            setResponse(null);
             setGameState(2);
         } else if(gameState == 6) {
             // Choosing targhet phase
@@ -237,12 +310,16 @@ export default function Singleplayer() {
 
         } else if(gameState == 7) {
             // End phase
+            setResponseQuestionDialogState(false);
             setEndGame(true);
-            if(botPhotoSelected.id == photoTargetSelected.id) {
+            if(botPhotoTargetSelected.id == photoSelected.id) {
+                setContentDialogState("Bot guess the character!");
+            } else if(botPhotoSelected.id == photoTargetSelected.id || (botPhotoSelected.length != 0 && botPhotoTargetSelected.id != photoSelected.id)) {
                 setContentDialogState("You Win!");
             } else {
                 setContentDialogState("You Lose!");
             }
+
             setDialogState(true);
         }
     }
@@ -288,7 +365,7 @@ export default function Singleplayer() {
                 <SideChat messages={messages} setMessages={setMessages}/>
             </div>
             {/* Main body */}
-            <div className="flex flex-col items-center justify-center h-full w-2/3">
+            <div className="flex flex-col items-center justify-center h-full w-2/3 px-4">
                 <div className="flex flex-col flex-1 items-center justify-center overflow-hidden">
                     <div className="grid grid-rows-4 grid-cols-6 h-full overflow-hidden">
                         {photos.map(el => {
@@ -316,16 +393,16 @@ export default function Singleplayer() {
                         <FieldGroup>
                             <Field orientation="horizontal">
                                 <FieldLabel>Difficulty</FieldLabel>
-                                <Select value={difficuty} onValueChange={setDifficulty}>
+                                <Select value={difficulty} onValueChange={setDifficulty}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a value..." />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectGroup>
                                             <SelectLabel>Difficulty</SelectLabel>
-                                            <SelectItem value="easy">Easy</SelectItem>
-                                            <SelectItem value="medium">Medium</SelectItem>
-                                            <SelectItem value="difficult">Difficult</SelectItem>
+                                            <SelectItem value={0}>Easy</SelectItem>
+                                            <SelectItem value={1}>Medium</SelectItem>
+                                            <SelectItem value={2}>Difficult</SelectItem>
                                         </SelectGroup>
                                     </SelectContent>
                                 </Select>
@@ -352,11 +429,13 @@ export default function Singleplayer() {
                     <div className="flex-1 overflow-hidden">
                         <Photo src={photoSelected?.path} className="h-full" />
                     </div>
-                    <div className="flex-1 overflow-hidden">
-                        <Photo src={photoTargetSelected?.path} className="h-full" />
+                    <div className="flex-1 flex flex-col gap-y-4 items-center justify-center overflow-hidden">
+                        <p className="font-bold text-center">Bot Characters</p>
+                        <IoPerson className="size-28" />
+                        <p className="font-bold text-xl">{botPhotos.filter(el => !el?.state).length} / {botPhotos.length}</p>
                     </div>
                 </div>
-                <div className="flex flex-col items-center justify-center w-full">
+                <div className={"flex flex-col items-center justify-center w-full " + (enableGuess ? "" : "hidden")}>
                     <Button className="h-12 w-26 text-xl cursor-pointer" onClick={guessClickHandle}>Guess</Button>
                 </div>
             </div>
