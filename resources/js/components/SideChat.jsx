@@ -1,3 +1,4 @@
+import { useAuth } from "@/context/AuthProvider";
 import ColoredText, { TextColor } from "./ColoredText";
 import { Card, CardHeader, CardTitle } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
@@ -5,6 +6,7 @@ import { Textarea } from "./ui/textarea";
 import { useState, useEffect, useRef } from "react";
 
 export default function SideChat({messages, setMessages, ...props}) {
+    const { user } = useAuth();
     const scrollRef = useRef(null);
 
     const textareaSubmit = (e) => {
@@ -17,9 +19,9 @@ export default function SideChat({messages, setMessages, ...props}) {
         setMessages((prev) => [
             ...prev,
             {
-            id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-            color: TextColor.GREEN,
-            text: value,
+                id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                color: TextColor.GREEN,
+                text: "[" + user?.username + "]: " + value,
             },
         ]);
 

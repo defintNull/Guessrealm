@@ -11,11 +11,14 @@ export default function Questions() {
         "Ha i capelli lisci?",
         "Ha la barba?",
         "Ha i baffi?",
-        "Haa gli occhi azzurri?",
+        "Ha gli occhi azzurri?",
         "Ha gli occhi verdi?",
         "Ha gli occhi marroni?",
         "Porta gli occhiali?",
         "Porta un cappello?",
-        "Porta orecchini?"
+        "È uomo?",
+        "È donna?",
+        "Ha un nome che inizia con una vocale?",
+        "Ha un nome che inizia con una consonante?"
     ]
 }
