@@ -39,7 +39,8 @@ export async function botAskQuestion(photos, difficulty, questions) {
                 count: 0
             }
         });
-        photos.forEach(el => {
+        let photoArray = photos.filter(el => !el.state);
+        photoArray.forEach(el => {
             el?.questions.forEach(q => {
                 if(q?.response) {
                     const item = map.find(m => m.id === q.id);
@@ -49,10 +50,13 @@ export async function botAskQuestion(photos, difficulty, questions) {
                 }
             });
         });
-        let sorted = [...map].sort((a, b) => a.count - b.count);
-        let mid = Math.floor(sorted.length / 2);
-        let medianItem = sorted[mid];
-        return questions.find(el => el.id === medianItem.id);
+        let averageItem = map.reduce((average, item) => {
+            if(item.count != photoArray.length && Math.abs(item.count - (photoArray.length / 2)) < Math.abs(average.count - (photoArray.length / 2))) {
+                return item;
+            }
+            return average;
+        }, map[0]);
+        return questions.find(el => (el.id == averageItem.id));
     } else {
         let map = questions.map(el => {
             return {
@@ -60,7 +64,8 @@ export async function botAskQuestion(photos, difficulty, questions) {
                 count: 0
             }
         });
-        photos.forEach(el => {
+        let photoArray = photos.filter(el => !el.state);
+        photoArray.forEach(el => {
             el?.questions.forEach(q => {
                 if(q?.response) {
                     const item = map.find(m => m.id === q.id);
@@ -70,7 +75,12 @@ export async function botAskQuestion(photos, difficulty, questions) {
                 }
             });
         });
-        let maxItem = map.reduce((max, item) => item.count > max.count ? item : max );
+        let maxItem = map.reduce((max, item) => {
+            if(item.count != photoArray.length && item.count > max.count) {
+                return item;
+            }
+            return max;
+        }, map[0]);
         return questions.find(el => (el.id == maxItem.id));
     }
 }
