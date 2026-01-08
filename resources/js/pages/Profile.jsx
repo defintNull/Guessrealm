@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Toaster } from "sonner";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useEffect } from "react";
@@ -16,16 +17,22 @@ import {
     FieldSet,
     FieldTitle,
 } from "@/components/ui/field";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthProvider";
 import { toast } from "sonner";
 import useDebounce from "@/hooks/useDebounce";
+import { useTheme } from "@/context/ThemeProvider";
 
 export default function Profile() {
-    let navigate = useNavigate();
-    const { user, setUser } = useAuth();
 
-    const [name, setName] = useState();
+    //Inizializzazione stato 
+    // #region contesti, stati e custom hooks
+    let navigate = useNavigate();
+    const { user, setUser, updateUserTheme } = useAuth();
+    const { theme, setTheme } = useTheme();
+
+    const [name, setName] = useState("");
     const [surname, setSurname] = useState("");
     const [email, setEmail] = useState("");
     const [profile_picture, setProfilePicture] = useState(null);
@@ -38,9 +45,11 @@ export default function Profile() {
     const [error, setError] = useState([]);
     const [isCheckingUsername, setIsCheckingUsername] = useState(false);
     const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+    //const [theme, setTheme] = useState("");
 
     const debouncedUsername = useDebounce(username, 500);
     const debouncedEmail = useDebounce(email, 500);
+    // #endregion
 
     // Carica i dati dell'utente quando il componente viene montato
     useEffect(() => {
@@ -49,6 +58,7 @@ export default function Profile() {
             setSurname(user.surname ?? "");
             setEmail(user.email ?? "");
             setUsername(user.username ?? "");
+            //setTheme(user.theme ?? "system");
         }
     }, [user]);
 
@@ -104,6 +114,7 @@ export default function Profile() {
         form.append("surname", surname);
         form.append("email", email);
         form.append("username", username);
+        //todo aggungi theme quando il backend sarà pronto
 
         if (profile_picture) {
             form.append("profile_picture", profile_picture);
@@ -176,7 +187,7 @@ export default function Profile() {
         // 2. NUOVO: Controllo Formato Email (Regex)
         // Questa regex controlla: testo + @ + testo + . + testo
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        
+
         if (!emailRegex.test(debouncedEmail)) {
             setErrorEmail([{ message: "Invalid email format" }]);
             setIsCheckingEmail(false);
@@ -223,8 +234,14 @@ export default function Profile() {
         }
     };
 
+    const handleThemeChange = (value) => {
+        setTheme(value);
+        //todo da inserire aggiornamento del backend
+    };
+
     return (
         <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
+            <Toaster position="top-right" richColors />
             <Card className="min-w-md">
                 <CardContent>
                     <form onSubmit={handleSubmit}>
@@ -232,6 +249,7 @@ export default function Profile() {
                             <FieldTitle className="text-xl font-semibold">
                                 Edit Profile
                             </FieldTitle>
+
                             <Field data-invalid={error_name.length > 0}>
                                 <FieldLabel>Name</FieldLabel>
                                 <Input
@@ -254,6 +272,28 @@ export default function Profile() {
                                 ></Input>
                                 <FieldError errors={error_surname} />
                             </Field>
+                            <Field>
+                                <FieldLabel>Theme</FieldLabel>
+                                <Select
+                                    value={theme}
+                                    onValueChange={handleThemeChange}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a theme" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="system">
+                                            System
+                                        </SelectItem>
+                                        <SelectItem value="light">
+                                            Light
+                                        </SelectItem>
+                                        <SelectItem value="dark">
+                                            Dark
+                                        </SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </Field>
                             <Field data-invalid={error_email.length > 0}>
                                 <FieldLabel>Email</FieldLabel>
                                 <Input
@@ -271,6 +311,7 @@ export default function Profile() {
                                 {!isCheckingEmail &&
                                     email === debouncedEmail &&
                                     error_email.length === 0 &&
+                                    user?.email !== email &&
                                     email && (
                                         <span style={{ color: "green" }}>
                                             Email is available!
@@ -293,6 +334,7 @@ export default function Profile() {
                                 {!isCheckingUsername &&
                                     username === debouncedUsername &&
                                     error_username.length === 0 &&
+                                    username !== user?.username &&
                                     username && (
                                         <span style={{ color: "green" }}>
                                             Username is available!
