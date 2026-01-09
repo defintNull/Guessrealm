@@ -20,10 +20,12 @@ export default function Password() {
 
     // 1. Uniformiamo i nomi: usiamo camelCase per React (setNewPassword)
     // e snake_case per il backend se serve.
+    const [current_password, setCurrentPassword] = useState("");
     const [new_password, setNewPassword] = useState("");
     const [confirm_password, setConfirmPassword] = useState("");
 
     // Stati per gli errori
+    const [error_currentpassword, setErrorCurrentPassword] = useState([]);
     const [error_newpassword, setErrorNewPassword] = useState([]);
     const [error_confirm_password, setErrorConfirmPassword] = useState([]);
     const [error, setError] = useState([]);
@@ -43,6 +45,7 @@ export default function Password() {
         }
 
         let form = new FormData();
+        form.append("current_password", current_password);
         form.append("new_password", new_password);
         form.append("confirm_password", confirm_password);
 
@@ -86,6 +89,13 @@ export default function Password() {
                                 }))
                             );
                         }
+                        if (errors?.current_password) {
+                            setErrorCurrentPassword(
+                                errors.current_password.map((el) => ({
+                                    message: el,
+                                }))
+                            );
+                        }
                     }
                 } else {
                     setError([{ message: "Something went wrong!" }]);
@@ -110,10 +120,29 @@ export default function Password() {
                                 type="text"
                                 name="username"
                                 autoComplete="username"
-                                value= {useAuth().user.username}
+                                value= {useAuth().user?.username || "" }
                                 style={{ display: "none" }}
                                 readOnly
                             />
+
+                            {/* CAMPO 0: Password Attuale */}
+                            <Field data-invalid={error_currentpassword.length > 0}>
+                                <FieldLabel htmlFor="current_password">Current Password</FieldLabel>
+                                <Input
+                                    id="current_password"
+                                    placeholder="Current Password"
+                                    required
+                                    value={current_password}
+                                    onChange={(e) =>
+                                        setCurrentPassword(e.target.value)
+                                    }
+                                    aria-invalid={error_currentpassword.length > 0}
+                                    type="password"
+                                    name="current_password" // Utile per i password manager
+                                    autoComplete="current-password"
+                                />
+                                <FieldError errors={error_currentpassword} />
+                            </Field>
 
                             {/* CAMPO 1: Nuova Password */}
                             <Field data-invalid={error_newpassword.length > 0}>

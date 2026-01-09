@@ -56,7 +56,7 @@ class AuthController extends Controller
                                                 ],
             'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
             'confirm_password' => ['required', 'string'],
-            'theme',
+            'theme' => ['sometimes', 'string', 'in:system,light,dark'],
         ]);
 
         if($request->password != $request->confirm_password) {
@@ -72,7 +72,8 @@ class AuthController extends Controller
             'surname' => $request->surname,
             'email' => $request->email,
             'username' => $request->username,
-            'password' => $request->password
+            'password' => $request->password,
+            'theme' => $request->input('theme', 'system'),
         ];
 
         if ($request->hasFile('profile_picture')) {

@@ -75,21 +75,27 @@ class ProfileController extends Controller
     }
     public function updatePassword(Request $request)
     {
-        // 1. Validazione Robusta
-        // Laravel controlla automaticamente se 'confirm_password' è uguale a 'new_password'
+        // 1. Controllo validazione
         $request->validate([
+            'current_password' => ['required', 'string'],
             'new_password' => ['required', 'string', 'min:8', 'max:255'],
             'confirm_password' => ['required', 'same:new_password'],
         ]);
 
         $user = $request->user();
 
-        // 2. Aggiornamento
+        // 2. Controllo vecchia password
+        if (!Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Password does not match our records.'],
+            ]);
+        }
+
+        // 3. Aggiornamento
         $user->update([
             'password' => Hash::make($request->new_password),
         ]);
 
-        // 3. Risposta JSON fondamentale per React
         return response()->json([
             'status' => 'success',
             'message' => 'Password updated successfully'
