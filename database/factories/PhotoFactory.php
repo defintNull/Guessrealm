@@ -17,7 +17,7 @@ class PhotoFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'name' => fake()->firstName(),
             'mime_type' => "image/png",
             'created_at' => now(),
             'updated_at' => now(),

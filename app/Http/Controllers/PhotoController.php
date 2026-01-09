@@ -14,7 +14,7 @@ class PhotoController extends Controller
      */
     public function index() : JsonResponse
     {
-        $fotos = Photo::select('id')->inRandomOrder()->limit(24)->get();
+        $fotos = Photo::select(['id', 'name'])->inRandomOrder()->limit(24)->get();
 
         return response()->json([
             'photos' => $fotos,

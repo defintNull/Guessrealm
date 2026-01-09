@@ -14,12 +14,15 @@ export async function botChooseIfGuess(photos, difficulty) {
 export async function botGuess(photos, difficulty) {
     let candidates = photos.filter(el => el?.state == false);
     let n = 0;
+    console.log(candidates);
     if(candidates.length != 0) {
         n = Math.floor(Math.random() * (candidates.length));
+        console.log(n);
+        return candidates[n];
     } else {
         n = Math.floor(Math.random() * (photos.length));
+        return photos[n];
     }
-    return photos[n];
 }
 
 export async function botQuestionResponse(photo, question) {

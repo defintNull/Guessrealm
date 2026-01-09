@@ -17,6 +17,14 @@ export default defineConfig({
         react(),
     ],
 
+    optimizeDeps: {
+        exclude: ['onnxruntime-web'],
+    },
+
+    build: {
+        target: "esnext",
+    },
+
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'resources/js'),
