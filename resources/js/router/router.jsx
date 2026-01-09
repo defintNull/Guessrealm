@@ -8,6 +8,7 @@ import { GuestMiddleware } from "./middlewares/GuestMiddleware";
 import { AuthMiddleware } from "./middlewares/AuthMiddleware";
 import Singleplayer from "@/pages/Singleplayer";
 import Profile from "@/pages/Profile";
+import Password from "@/pages/Password";
 
 
 const router = createBrowserRouter([
@@ -52,7 +53,15 @@ const router = createBrowserRouter([
                 <Profile />
             </AuthMiddleware>
         )
-    }
+    },
+    {
+        path: "/password",
+        element : (
+            <AuthMiddleware>
+                <Password />
+            </AuthMiddleware>
+        )
+    },
 ]);
 
 export default router;

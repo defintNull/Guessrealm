@@ -50,6 +50,7 @@ export default function Profile() {
     const [error, setError] = useState([]);
     const [isCheckingUsername, setIsCheckingUsername] = useState(false);
     const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+    const [selectedTheme, setSelectedTheme] = useState(theme)
 
     const debouncedUsername = useDebounce(username, 500);
     const debouncedEmail = useDebounce(email, 500);
@@ -135,7 +136,7 @@ export default function Profile() {
             setUser(res.data.user);
 
             //aggiornamento del tema
-            setTheme(theme);
+            setTheme(selectedTheme);
 
             // mostra messaggio di successo
             toast.success("Profile updated successfully!");
@@ -256,6 +257,7 @@ export default function Profile() {
                             <Field data-invalid={error_name.length > 0}>
                                 <FieldLabel>Name</FieldLabel>
                                 <Input
+                                    autocoplete="given-name"
                                     placeholder="Name"
                                     required
                                     value={name}
@@ -267,6 +269,7 @@ export default function Profile() {
                             <Field data-invalid={error_surname.length > 0}>
                                 <FieldLabel>Surname</FieldLabel>
                                 <Input
+                                    autocoplete="family-name"
                                     placeholder="Surname"
                                     required
                                     value={surname}
@@ -278,8 +281,8 @@ export default function Profile() {
                             <Field>
                                 <FieldLabel>Theme</FieldLabel>
                                 <Select
-                                    value={theme}
-                                    onValueChange={(value) => {setTheme(value)}}
+                                    value={selectedTheme}
+                                    onValueChange={(value) => {setSelectedTheme(value)}}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a theme" />
@@ -300,6 +303,7 @@ export default function Profile() {
                             <Field data-invalid={error_email.length > 0}>
                                 <FieldLabel>Email</FieldLabel>
                                 <Input
+                                    autocoplete="email"
                                     placeholder="Email"
                                     required
                                     value={email}
@@ -324,6 +328,7 @@ export default function Profile() {
                             <Field data-invalid={error_username.length > 0}>
                                 <FieldLabel>Userame</FieldLabel>
                                 <Input
+                                    autocoplete="username"
                                     placeholder="Username"
                                     required
                                     value={username}
