@@ -6,6 +6,8 @@ use Illuminate\Http\Request;
 use \App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
@@ -49,7 +51,8 @@ class ProfileController extends Controller
         return response()->json(['exists' => $exists]);
     }
 
-    public function updateTheme(Request $request) : JsonResponse {
+    public function updateTheme(Request $request): JsonResponse
+    {
         // 1. Validazione: Accettiamo solo i tre valori permessi
         $request->validate([
             'theme' => ['required', 'string', 'in:system,light,dark']
@@ -68,6 +71,28 @@ class ProfileController extends Controller
             'status' => 'OK',
             'message' => 'Theme updated successfully',
             'theme' => $user->theme
+        ], 200);
+    }
+    public function updatePassword(Request $request)
+    {
+        // 1. Validazione Robusta
+        // Laravel controlla automaticamente se 'confirm_password' è uguale a 'new_password'
+        $request->validate([
+            'new_password' => ['required', 'string', 'min:8', 'max:255'],
+            'confirm_password' => ['required', 'same:new_password'],
+        ]);
+
+        $user = $request->user();
+
+        // 2. Aggiornamento
+        $user->update([
+            'password' => Hash::make($request->new_password),
+        ]);
+
+        // 3. Risposta JSON fondamentale per React
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Password updated successfully'
         ], 200);
     }
 }

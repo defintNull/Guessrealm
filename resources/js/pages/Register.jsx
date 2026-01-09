@@ -120,6 +120,7 @@ export default function Register() {
                         <Field data-invalid={error_name.length > 0}>
                             <FieldLabel>Name</FieldLabel>
                             <Input
+                                autocomplete="given-name"
                                 placeholder="Name"
                                 required
                                 value={name}
@@ -131,6 +132,7 @@ export default function Register() {
                         <Field data-invalid={error_surname.length > 0}>
                             <FieldLabel>Surname</FieldLabel>
                             <Input
+                                autocomplete="family-name"
                                 placeholder="Surname"
                                 required
                                 value={surname}
@@ -142,6 +144,7 @@ export default function Register() {
                         <Field data-invalid={error_email.length > 0}>
                             <FieldLabel>Email</FieldLabel>
                             <Input
+                                autocomplete="email"
                                 placeholder="Email"
                                 required
                                 value={email}
@@ -169,6 +172,7 @@ export default function Register() {
                         <Field data-invalid={error_username.length > 0}>
                             <FieldLabel>Userame</FieldLabel>
                             <Input
+                                autocomplete="username"
                                 placeholder="Username"
                                 required
                                 value={username}
@@ -180,6 +184,7 @@ export default function Register() {
                         <Field data-invalid={error_password.length > 0}>
                             <FieldLabel>Password</FieldLabel>
                             <Input
+                                autocomplete="new-password"
                                 placeholder="Password"
                                 required
                                 value={password}
@@ -192,6 +197,7 @@ export default function Register() {
                         <Field data-invalid={error_confirm_password.length > 0}>
                             <FieldLabel>Confirm password</FieldLabel>
                             <Input
+                                autocomplete="new-password"
                                 placeholder="Confirm password"
                                 required
                                 value={confirm_password}
