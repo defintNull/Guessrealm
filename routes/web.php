@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AiController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Middleware\SPAMiddleware;
@@ -41,7 +42,7 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
 
         Route::get('/checkEditUsername/{username}', [ProfileController::class, 'checkEditUsername'])
             ->name('check_edit_username');
-        
+
         Route::get('/checkEditEmail/{email}', [ProfileController::class, 'checkEditEmail'])
             ->name('check_edit_email');
 
@@ -54,6 +55,14 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             Route::get('photo/show/{id}', [PhotoController::class, 'show'])
                 ->withoutMiddleware([SPAMiddleware::class])
                 ->name('photo.show');
+        });
+
+        Route::name('ai.')->prefix('ai')->group(function() {
+            Route::get('aimodel', [AiController::class, 'getModel'])
+                ->name('getModel');
+
+            Route::get('aidatamodel', [AiController::class, 'getDataModel'])
+                ->name('getDataModel');
         });
     });
 });

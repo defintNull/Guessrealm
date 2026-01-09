@@ -1,4 +1,5 @@
 import * as ort from 'onnxruntime-web';
+import type { AxiosInstance } from "axios";
 
 /**
  * CONFIGURAZIONE
@@ -90,26 +91,51 @@ export type QuestionAnswer = {
  * CLASSE PRINCIPALE
  */
 export class FacialAttributesClassifier {
+  private static instance: FacialAttributesClassifier | null = null;
   private session: ort.InferenceSession | null = null;
 
-  async loadModel(modelPath?: string, dataPath?: string): Promise<void> {
+  private constructor() {}
+
+  public static getInstance(): FacialAttributesClassifier {
+    if (!FacialAttributesClassifier.instance) {
+        FacialAttributesClassifier.instance = new FacialAttributesClassifier();
+    }
+    return FacialAttributesClassifier.instance;
+  }
+
+  public async loadModel(modelPath?: string, dataPath?: string, axios?: AxiosInstance): Promise<boolean> {
     const mPath = modelPath || CONFIG.modelPath;
     const dPath = dataPath || `${CONFIG.modelPath}.data`;
 
     try {
-      const modelResponse = await fetch(mPath);
-      const modelBuffer = await modelResponse.arrayBuffer();
+      let modelResponse = null;
+      let modelBuffer = null;
+      let dataResponse = null;
+      let dataBuffer = null;
 
-      const dataResponse = await fetch(dPath);
-      const dataBuffer = await dataResponse.arrayBuffer();
+      if (axios) {
+        modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
+        dataResponse  = await axios.get(dPath,  { responseType: "arraybuffer" });
+
+        modelBuffer = modelResponse.data;
+        dataBuffer  = dataResponse.data;
+      } else {
+        modelResponse = await fetch(mPath);
+        dataResponse  = await fetch(dPath);
+
+        modelBuffer = await modelResponse.arrayBuffer();
+        dataBuffer  = await dataResponse.arrayBuffer();
+      }
 
       this.session = await ort.InferenceSession.create(modelBuffer, {
-        externalData: [{ data: dataBuffer, path: dPath }]
+        externalData: [{ data: dataBuffer, path: `${CONFIG.modelPath}.data` }]
       });
 
       console.log('Model loaded successfully');
+      return true;
     } catch (error) {
       throw new Error(`Failed to load model: ${error}`);
+      return false;
     }
   }
 
@@ -206,15 +232,14 @@ export class FacialAttributesClassifier {
   /**
    * METODO CENTRALE: Classifica una singola immagine e restituisce array di 19 risposte
    */
-  async classifyImageById(imageId: number, imageName?: string): Promise<QuestionAnswer[]> {
+  public async classifyImage(imageSrc: string, imageName?: string): Promise<QuestionAnswer[]> {
     if (!this.session) {
       throw new Error('Model not loaded. Call loadModel() first.');
     }
 
     try {
       // Costruisci il path dell'immagine
-      const paddedNumber = String(imageId).padStart(6, '0');
-      const imageUrl = `${CONFIG.imageFolder}/${paddedNumber}.png`;
+      const imageUrl = imageSrc;
 
       // Pre-processa l'immagine
       const tensor = await this.preprocessImage(imageUrl);
@@ -318,7 +343,7 @@ export class FacialAttributesClassifier {
 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to classify image ${imageId}: ${message}`);
+      throw new Error(`Failed to classify image ${imageSrc}: ${message}`);
     }
   }
 
@@ -327,20 +352,4 @@ export class FacialAttributesClassifier {
     const firstChar = name.charAt(0).toLowerCase();
     return ['a', 'e', 'i', 'o', 'u'].includes(firstChar);
   }
-}
-
-/**
- * FUNZIONE DI UTILITÀ
- */
-export async function classifyImageById(
-  imageId: number,
-  imageName?: string,
-  options?: {
-    modelPath?: string;
-    dataPath?: string;
-  }
-): Promise<QuestionAnswer[]> {
-  const classifier = new FacialAttributesClassifier();
-  await classifier.loadModel(options?.modelPath, options?.dataPath);
-  return await classifier.classifyImageById(imageId, imageName);
 }

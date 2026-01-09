@@ -21,7 +21,7 @@ export default function Photo({ src, name = "Pippo", alt = "", className = "", s
                 alt={alt}
                 onLoad={() => setLoaded(true)}
             />
-            <p className="flex-1">{name}</p>
+            <p className="flex-1 text-center">{name}</p>
         </Card>
     );
 }

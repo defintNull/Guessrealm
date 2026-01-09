@@ -12,7 +12,7 @@ export default function Questions() {
         "Ha i capelli ricci?",//9
         "Ha i capelli lisci?",//10
         "Ha la barba?",//11
-        "Haa gli occhi azzurri?",//12
+        "Ha gli occhi azzurri?",//12
         "Ha gli occhi verdi?",//13
         "Ha gli occhi marroni?",//14
         "Porta gli occhiali?",//15

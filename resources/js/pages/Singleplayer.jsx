@@ -60,6 +60,7 @@ import { useAuth } from '@/context/AuthProvider';
 import { botChooseCharacter, botAskQuestion, botQuestionResponse, botRegisterResponse, botChooseIfGuess, botGuess } from '@/services/BOT';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Timer from '@/components/Timer';
+import { FacialAttributesClassifier } from '@/services/ai_bot/standalone';
 
 export default function Singleplayer() {
     const { user } = useAuth();
@@ -70,15 +71,15 @@ export default function Singleplayer() {
     const [ botPhotos, setBotPhotos ] = useState([]);
     const [ endGame, setEndGame ] = useState(false);
 
-    const TIMER = 20;
+    const TIMER = 120;
     const [ time, setTime ] = useState(TIMER);
     const [ timerRunning, setTimerRunning ] = useState(false);
     const [ enableForward, setEnableForward ] = useState(false);
 
-    const [ photoSelected, setPhotoSelected ] = useState([]);
-    const [ photoTargetSelected, setPhotoTargetSelected ] = useState([]);
-    const [ botPhotoSelected, setBotPhotoSelected ] = useState([]);
-    const [ botPhotoTargetSelected, setBotPhotoTargetSelected ] = useState([]);
+    const [ photoSelected, setPhotoSelected ] = useState(null);
+    const [ photoTargetSelected, setPhotoTargetSelected ] = useState(null);
+    const [ botPhotoSelected, setBotPhotoSelected ] = useState(null);
+    const [ botPhotoTargetSelected, setBotPhotoTargetSelected ] = useState(null);
 
     const [ messages, setMessages ] = useState([]);
 
@@ -90,6 +91,12 @@ export default function Singleplayer() {
     // Settings
     const [ difficulty, setDifficulty ] = useState(1);
     const [ aiHelp, setAiHelp ] = useState(1);
+    const [ aiLoading, setAiLoading ] = useState(true);
+    const aiLoadingRef = useRef(aiLoading);
+
+    useEffect(() => {
+        aiLoadingRef.current = aiLoading;
+    }, [aiLoading]);
 
     // Enable Guess
     const [ enableGuess, setEnableGuess ] = useState(false);
@@ -117,25 +124,15 @@ export default function Singleplayer() {
     // Click photo mode
     const [ mode, setMode ] = useState(0);
 
+    useEffect(() => {
+        console.log(botPhotoSelected);
+    }, [botPhotoSelected])
+
     // Preprocessing
     useEffect(() => {
         // Foto loading
         (async () => {
             let res = await axios.post("/spa/game/photos");
-            let photosArray = res.data?.photos.map(el => {
-                    return {
-                        id:el?.id,
-                        path:"/spa/game/photo/show/" + el?.id,
-                        data: [],
-                        questions: [],
-                        state: false,
-                        help: false
-                    }
-                }
-            );
-            let botPhotosArray = photosArray.map(p => ({ ...p }));
-            setPhotos(photosArray);
-            setBotPhotos(botPhotosArray);
 
             // Set questions
             let questionsArray = Questions().map((el, index) => {
@@ -147,19 +144,64 @@ export default function Singleplayer() {
             });
             setQuestions(questionsArray);
 
+            // Set photos
+            let photosArray = res.data?.photos.map(el => {
+                let qs = [];
+                questionsArray.forEach(q => {
+                    qs.push({
+                        id: q.id,
+                        response: false,
+                        affidability: 0.00
+                    });
+                });
+                return {
+                    id:el?.id,
+                    path:"/spa/game/photo/show/" + el?.id,
+                    data: {
+                        name: el?.name || "Pippo"
+                    },
+                    questions: qs,
+                    state: false,
+                    help: false
+                }
+                }
+            );
+            let botPhotosArray = photosArray.map(p => ({ ...p }));
+            setPhotos(photosArray);
+            setBotPhotos(botPhotosArray);
+
             // AI MODEL CODE
             (async () => {
-                photosArray = photosArray.map(photo => ({
-                    ...photo,
-                    questions: questionsArray.map(q => ({
-                        id: q.id,
-                        response: Math.random() < 0.5,
-                        affidability: 0.5
-                    }))
-                }));
+                let aiModel = FacialAttributesClassifier.getInstance();
+                await aiModel.loadModel(
+                    "spa/ai/aimodel",
+                    "spa/ai/aidatamodel",
+                    axios
+                )
+                photosArray = photosArray.map(async photo => {
+                    let aiRes = await aiModel.classifyImage(photo.path, photo?.data?.name, {
+                        axios: axios,
+                        modelPath: "spa/ai/aimodel",
+                        dataPath: "spa/ai/aidatamodel"
+                    });
+                    let questionsArray = aiRes.map(ai => {
+                        const { questionId, answer, percentage } = ai;
+                        return {
+                            id: questionId,
+                            response: answer,
+                            affidability: Number((percentage / 100).toFixed(2))
+                        }
+                    });
+                    return {
+                        ...photo,
+                        questions: questionsArray
+                    }
+                });
+                photosArray = await Promise.all(photosArray);
                 botPhotosArray = photosArray.map(p => ({ ...p }));
                 setPhotos(photosArray);
                 setBotPhotos(botPhotosArray);
+                setAiLoading(false);
             })();
         })();
 
@@ -211,6 +253,17 @@ export default function Singleplayer() {
         setTimerRunning(true);
     }
 
+
+    function waitFor(condition, interval = 100) {
+        return new Promise(resolve => {
+            const check = () => {
+                if (condition()) resolve();
+                else setTimeout(check, interval);
+            };
+            check();
+        });
+    }
+
     // Game function FSM
     async function game() {
         if(gameState == 0) {
@@ -223,7 +276,7 @@ export default function Singleplayer() {
                       text: "[System]: Loading...",
                     },
                 ]);
-            await new Promise(res => setTimeout(res, 3000));
+            await waitFor(() => aiLoadingRef.current === false);
             setLoadingDialogState(false);
             setGameState(1);
         } else if(gameState == 1) {
@@ -283,6 +336,7 @@ export default function Singleplayer() {
             })();
         } else if(gameState == 4) {
             // Close phase
+            setEnableGuess(false);
             restartTimer()
             setEnableForward(true);
 
@@ -367,9 +421,11 @@ export default function Singleplayer() {
             // End phase
             setResponseQuestionDialogState(false);
             setEndGame(true);
-            if(photoSelected.length != 0 && botPhotoTargetSelected.id == photoSelected.id) {
+            const botGuessedCorrectly = botPhotoTargetSelected?.id === photoSelected?.id;
+            const userGuessedCorrectly = botPhotoSelected?.id === photoTargetSelected?.id;
+            if (botGuessedCorrectly) {
                 setContentDialogState("Bot guess the character!");
-            } else if(botPhotoSelected.id == photoTargetSelected.id || (botPhotoTargetSelected.length != 0 && botPhotoTargetSelected.id != photoSelected.id)) {
+            } else if (userGuessedCorrectly || (photoTargetSelected === null && !botGuessedCorrectly)) {
                 setContentDialogState("You Win!");
             } else {
                 setContentDialogState("You Lose!");
@@ -499,7 +555,7 @@ export default function Singleplayer() {
                 <div className="flex flex-col flex-1 items-center justify-center overflow-hidden">
                     <div className="grid grid-rows-4 grid-cols-6 gap-x-4 gap-y-2 h-full overflow-hidden">
                         {photos.map(el => (
-                            <Photo className="cursor-pointer" data-id={el.id} key={el.id} state={el.state} src={el.path} animated={el.help} onClick={characterClick}/>
+                            <Photo className="cursor-pointer" data-id={el.id} name={el?.data?.name} key={el.id} state={el.state} src={el.path} animated={el.help} onClick={characterClick}/>
                         ))}
                     </div>
                 </div>
