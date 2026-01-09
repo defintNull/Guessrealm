@@ -33,6 +33,7 @@ class AuthController extends Controller
                     'surname',
                     'username',
                     'email',
+                    'theme',
                 ]),
             ], 200);
         }
@@ -54,7 +55,8 @@ class AuthController extends Controller
                                                     ->symbols()
                                                 ],
             'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'confirm_password' => ['required', 'string']
+            'confirm_password' => ['required', 'string'],
+            'theme',
         ]);
 
         if($request->password != $request->confirm_password) {
@@ -91,6 +93,7 @@ class AuthController extends Controller
                 'surname',
                 'username',
                 'email',
+                'theme',
             ])
         ], 200);
     }
@@ -107,6 +110,7 @@ class AuthController extends Controller
                 'surname',
                 'username',
                 'email',
+                'theme',
             ])
         ], 200);
     }

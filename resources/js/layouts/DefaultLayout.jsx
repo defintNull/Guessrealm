@@ -1,4 +1,4 @@
-import { Link, Outlet } from "react-router-dom";
+import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
 
 import {
@@ -14,6 +14,7 @@ import { useAuth } from "@/context/AuthProvider";
 import { Card } from "@/components/ui/card";
 
 export default function DefaultLayout() {
+    const navigate = useNavigate();
     const { user, setUser } = useAuth();
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -25,6 +26,7 @@ export default function DefaultLayout() {
         try{
             await axios.post('/spa/logout');
             setUser(null);
+            navigate("/");
         } catch (error) {
         }
     }

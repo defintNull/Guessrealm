@@ -64,7 +64,7 @@ export default function Register() {
         } catch (error) {
             if(error.response) {
                 if(error.response.status == 429) {
-                    setError(["Too many request!"]);
+                    setError([{message: "Too many request!"}]);
                 } else if(error.response.status == 422) {
                     if(error.response.data?.errors) {
                         let errors = error.response.data?.errors;
@@ -105,7 +105,7 @@ export default function Register() {
                         }
                     }
                 } else {
-                    setError(["Something whent wrong!"]);
+                    setError([{message: "Something whent wrong!"}]);
                 }
             }
         }

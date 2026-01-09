@@ -139,3 +139,16 @@
     @apply bg-background text-foreground;
     }
 }
+
+@keyframes glow {
+    0% {
+        box-shadow: 0 0 0px rgba(255, 255, 255, 0.3);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(255, 255, 255, 0.9);
+    }
+    100% {
+        box-shadow: 0 0 0px rgba(255, 255, 255, 0.3);
+    }
+}
+.animate-glow { animation: glow 1.5s ease-in-out infinite; }

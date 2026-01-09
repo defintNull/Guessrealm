@@ -5,6 +5,7 @@ import axios from 'axios'
 import { useEffect, useState, useRef } from 'react'
 import { IoIosSettings } from "react-icons/io";
 import { IoPerson } from "react-icons/io5";
+import { FaStar } from "react-icons/fa";
 
 import {
   Command,
@@ -57,6 +58,8 @@ import { ImCheckmark } from "react-icons/im";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthProvider';
 import { botChooseCharacter, botAskQuestion, botQuestionResponse, botRegisterResponse, botChooseIfGuess, botGuess } from '@/services/BOT';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import Timer from '@/components/Timer';
 
 export default function Singleplayer() {
     const { user } = useAuth();
@@ -66,6 +69,11 @@ export default function Singleplayer() {
     const [ photos, setPhotos ] = useState([]);
     const [ botPhotos, setBotPhotos ] = useState([]);
     const [ endGame, setEndGame ] = useState(false);
+
+    const TIMER = 20;
+    const [ time, setTime ] = useState(TIMER);
+    const [ timerRunning, setTimerRunning ] = useState(false);
+    const [ enableForward, setEnableForward ] = useState(false);
 
     const [ photoSelected, setPhotoSelected ] = useState([]);
     const [ photoTargetSelected, setPhotoTargetSelected ] = useState([]);
@@ -81,7 +89,7 @@ export default function Singleplayer() {
 
     // Settings
     const [ difficulty, setDifficulty ] = useState(1);
-    const [ aiHelp, setAiHelp ] = useState("on");
+    const [ aiHelp, setAiHelp ] = useState(1);
 
     // Enable Guess
     const [ enableGuess, setEnableGuess ] = useState(false);
@@ -121,6 +129,7 @@ export default function Singleplayer() {
                         data: [],
                         questions: [],
                         state: false,
+                        help: false
                     }
                 }
             );
@@ -132,7 +141,8 @@ export default function Singleplayer() {
             let questionsArray = Questions().map((el, index) => {
                 return {
                     id: index,
-                    text: el
+                    text: el,
+                    best: false
                 }
             });
             setQuestions(questionsArray);
@@ -165,25 +175,43 @@ export default function Singleplayer() {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // Command block click handle
-    function commandInputClickHandler() {
-        setCommandVisibility(true);
+    // Timer
+    useEffect(() => {
+        if (!timerRunning) return;
+        if (time <= 0) {
+            forwardClickHandle();
+            setTimerRunning(false);
+            return;
+        }
+
+        const interval = setInterval(() => {
+            setTime(prev => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [timerRunning, time]);
+
+    function forwardClickHandle() {
+        if(gameState == 1 || gameState == 5) {
+            setGameState(8);
+        } else if(gameState == 2) {
+            setGameState(gameState + 2);
+        } else {
+            setGameState(gameState + 1);
+        }
     }
 
-    function commandClickHandle(id) {
-        let chosenQuestion = questions.find(el => el.id == id)
-        setCurrentQuestion(chosenQuestion);
-        setMessages((prev) => [
-            ...prev,
-            {
-                id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-                color: TextColor.GREEN,
-                text: "[" + user?.username + "]: Asking: \"" + chosenQuestion.text + "\"",
-            },
-        ]);
-        setGameState(3);
+    function resetTimer() {
+        setTime(TIMER);
+        setTimerRunning(false);
     }
 
+    function restartTimer() {
+        setTime(TIMER);
+        setTimerRunning(true);
+    }
+
+    // Game function FSM
     async function game() {
         if(gameState == 0) {
             // Await loading
@@ -200,6 +228,8 @@ export default function Singleplayer() {
             setGameState(1);
         } else if(gameState == 1) {
             // Choosing character
+            restartTimer()
+
             setContentDialogState("Select your character")
             setDialogState(true);
             setMessages((prev) => [
@@ -215,6 +245,9 @@ export default function Singleplayer() {
             setBotPhotoSelected(botChooseCharacter(botPhotos));
         } else if(gameState == 2) {
             // Command selection phase
+            restartTimer()
+            setEnableForward(true);
+
             setEnableGuess(true);
             setMessages((prev) => [
                     ...prev,
@@ -227,6 +260,9 @@ export default function Singleplayer() {
             setCommandBlockVisibility(true);
         } else if(gameState == 3) {
             // Await question response
+            restartTimer();
+            setEnableForward(false);
+
             setContentAskQuestionDialog(currentQuestion?.text);
             setAwaitResponse(true);
             setAskQuestionDialogState(true);
@@ -246,9 +282,23 @@ export default function Singleplayer() {
                 setAwaitResponse(false);
             })();
         } else if(gameState == 4) {
-            // BOT turn
+            // Close phase
+            restartTimer()
+            setEnableForward(true);
+
             setCommandBlockVisibility(false);
             setAskQuestionDialogState(false);
+            aiCloseSuggestions();
+        } else if(gameState == 5) {
+            setPhotos(photos.map(el => {
+                return {
+                    ...el,
+                    help: false
+                }
+            }));
+            // BOT turn
+            restartTimer()
+            setEnableForward(false);
 
             setCurrentQuestion(null);
             setResponse(null);
@@ -263,7 +313,7 @@ export default function Singleplayer() {
                 if(choice) {
                     let guess = await botGuess(botPhotos, difficulty);
                     setBotPhotoTargetSelected(guess);
-                    setGameState(7);
+                    setGameState(8);
                     return;
                 }
 
@@ -280,8 +330,10 @@ export default function Singleplayer() {
                 ]);
                 setAwaitResponse(false);
             })();
-        } else if(gameState == 5) {
+        } else if(gameState == 6) {
             // Response phase
+            restartTimer()
+            setEnableForward(false);
 
             // Codice per gestire risposta del giocatore
             setMessages((prev) => [
@@ -302,19 +354,22 @@ export default function Singleplayer() {
             setCurrentQuestion(null);
             setResponse(null);
             setGameState(2);
-        } else if(gameState == 6) {
+        } else if(gameState == 7) {
             // Choosing targhet phase
+            restartTimer()
+            setEnableForward(false);
+
             setContentDialogState("Guess the chosen character!")
             setDialogState(true);
             setMode(1)
 
-        } else if(gameState == 7) {
+        } else if(gameState == 8) {
             // End phase
             setResponseQuestionDialogState(false);
             setEndGame(true);
-            if(botPhotoTargetSelected.id == photoSelected.id) {
+            if(photoSelected.length != 0 && botPhotoTargetSelected.id == photoSelected.id) {
                 setContentDialogState("Bot guess the character!");
-            } else if(botPhotoSelected.id == photoTargetSelected.id || (botPhotoSelected.length != 0 && botPhotoTargetSelected.id != photoSelected.id)) {
+            } else if(botPhotoSelected.id == photoTargetSelected.id || (botPhotoTargetSelected.length != 0 && botPhotoTargetSelected.id != photoSelected.id)) {
                 setContentDialogState("You Win!");
             } else {
                 setContentDialogState("You Lose!");
@@ -324,7 +379,82 @@ export default function Singleplayer() {
         }
     }
 
-    useEffect(() => {game()}, [gameState]);
+    async function aiQuestionSuggestions() {
+        if(gameState == 2) {
+
+            let map = questions.map(el => {
+                return {
+                    id: el?.id,
+                    count: 0
+                }
+            });
+
+            let photoArray = photos.filter(el => !el.state);
+
+            photoArray.forEach(el => {
+                el?.questions.forEach(q => {
+                    if (q?.response) {
+                        const item = map.find(m => m.id === q.id);
+                        if (item) {
+                            item.count++;
+                        }
+                    }
+                });
+            });
+            const target = photoArray.length / 2;
+            let sorted = map
+                .filter(item => item.count !== photoArray.length)
+                .sort((a, b) => {
+                    return Math.abs(a.count - target) - Math.abs(b.count - target);
+                });
+
+            let top4 = sorted.slice(0, 4);
+            top4 = top4.map(item => questions.find(q => q.id === item.id));
+            let questionsArray = [...questions];
+            questionsArray.forEach(el => {
+                if (top4.some(q => q.id === el.id)) {
+                    el.best = true;
+                } else {
+                    el.best = false;
+                }
+            });
+            setQuestions(questionsArray);
+        }
+    }
+
+    async function aiCloseSuggestions() {
+        let photosArray = photos.map(el => {
+            if(!el.state && response != undefined &&currentQuestion != undefined && el?.questions.find(q => q.id == currentQuestion?.id)?.response != response) {
+                return {
+                    ...el,
+                    help: true
+                }
+            }
+            return el;
+        });
+        setPhotos(photosArray);
+    }
+
+    useEffect(() => {game(); aiQuestionSuggestions()}, [gameState]);
+
+    // Command block click handle
+    function commandInputClickHandler() {
+        setCommandVisibility(true);
+    }
+
+    function commandClickHandle(id) {
+        let chosenQuestion = questions.find(el => el.id == id)
+        setCurrentQuestion(chosenQuestion);
+        setMessages((prev) => [
+            ...prev,
+            {
+                id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                color: TextColor.GREEN,
+                text: "[" + user?.username + "]: Asking: \"" + chosenQuestion.text + "\"",
+            },
+        ]);
+        setGameState(3);
+    }
 
     // Photo click handle
     function characterClick(event) {
@@ -334,7 +464,7 @@ export default function Singleplayer() {
             setMode(2);
         } else if(mode == 1) {
             setPhotoTargetSelected(photos.find(el => el.id == event.currentTarget.dataset.id));
-            setGameState(7);
+            setGameState(8);
         } else {
             let photosMap = photos.map(el => {
                 if(el.id == event.currentTarget.dataset.id) {
@@ -347,7 +477,7 @@ export default function Singleplayer() {
     }
 
     function guessClickHandle() {
-        setGameState(6);
+        setGameState(7);
     }
 
     function dialogClickHandle() {
@@ -365,27 +495,42 @@ export default function Singleplayer() {
                 <SideChat messages={messages} setMessages={setMessages}/>
             </div>
             {/* Main body */}
-            <div className="flex flex-col items-center justify-center h-full w-2/3 px-4">
+            <div className="flex flex-col items-center justify-center gap-y-2 h-full w-2/3 px-4">
                 <div className="flex flex-col flex-1 items-center justify-center overflow-hidden">
-                    <div className="grid grid-rows-4 grid-cols-6 h-full overflow-hidden">
-                        {photos.map(el => {
-                            return <Photo className="cursor-pointer" data-id={el.id} key={el.id} state={el.state} src={el.path} onClick={characterClick}/>
-                        })}
+                    <div className="grid grid-rows-4 grid-cols-6 gap-x-4 gap-y-2 h-full overflow-hidden">
+                        {photos.map(el => (
+                            <Photo className="cursor-pointer" data-id={el.id} key={el.id} state={el.state} src={el.path} animated={el.help} onClick={characterClick}/>
+                        ))}
                     </div>
                 </div>
-                <Command ref={commandRef} className={"grow-0 w-full h-13 overflow-visible relative px-4 py-2 " + (!commandBlockVisibility ? "hidden" : "")}>
-                    <CommandList className={"absolute w-full max-h-40 bg-slate-50 rounded-t-xl z-20 bottom-13 " + (!commandVisibility ? "hidden": "")}>
-                        <CommandEmpty>No question found!</CommandEmpty>
-                        {questions.map(el => <CommandItem className="cursor-pointer" onSelect={() => commandClickHandle(el.id)} data-id={el.id} key={el.id}>{el.text}</CommandItem>)}
-                    </CommandList>
-                    <CommandInput onClick={commandInputClickHandler} placeholder="Search for a question" />
-                </Command>
+
+                <div className="grow-0 w-full flex flex-row gap-x-2 h-13">
+                    <div className={"grow " + (commandBlockVisibility ? "hidden" : "")}></div>
+                    <Command ref={commandRef} className={"grow overflow-visible relative py-2 " + (!commandBlockVisibility ? "hidden" : "")}>
+                        <CommandList className={"absolute w-full max-h-40 bg-slate-50 dark:bg-gray-900 rounded-t-xl z-20 bottom-full " + (!commandVisibility ? "hidden" : "")}>
+                            <ScrollArea className="max-h-40">
+                                <CommandEmpty>No question found!</CommandEmpty>
+                                {questions.map(el => (
+                                    <CommandItem className="cursor-pointer justify-between pr-2" onSelect={() => commandClickHandle(el.id)} data-id={el.id} key={el.id}>
+                                        <p>{el.text}</p>
+                                        {(aiHelp && el.best) ? <FaStar /> : null}
+                                    </CommandItem>
+                                ))}
+                            </ScrollArea>
+                        </CommandList>
+
+                        <div className="px-4">
+                            <CommandInput onClick={commandInputClickHandler} placeholder="Search for a question"/>
+                        </div>
+                    </Command>
+                    <Timer onClick={forwardClickHandle} clickEnable={enableForward} time={time} />
+                </div>
             </div>
             {/* Right Sidebar */}
             <div className="flex flex-col grow gap-y-5 items-end">
                 <Dialog>
                     <DialogTrigger asChild>
-                        <IoIosSettings className="text-6xl mr-4 mt-8 rounded-4xl hover:bg-slate-100 hover:cursor-pointer" />
+                        <IoIosSettings className="text-6xl mr-4 mt-8 rounded-4xl hover:bg-slate-100 dark:hover:bg-gray-800 hover:cursor-pointer" />
                     </DialogTrigger>
                     <DialogContent>
                         <DialogTitle>Settings</DialogTitle>
@@ -416,8 +561,8 @@ export default function Singleplayer() {
                                     <SelectContent>
                                         <SelectGroup>
                                             <SelectLabel>AIHelp</SelectLabel>
-                                            <SelectItem value="on">On</SelectItem>
-                                            <SelectItem value="off">Off</SelectItem>
+                                            <SelectItem value={1}>On</SelectItem>
+                                            <SelectItem value={0}>Off</SelectItem>
                                         </SelectGroup>
                                     </SelectContent>
                                 </Select>
@@ -504,13 +649,13 @@ export default function Singleplayer() {
                             <div className="flex flex-row min-h-20 items-center justify-center gap-x-12">
                                 <Card className="p-2 w-full h-full cursor-pointer" onClick={() => {
                                     setResponse(false);
-                                    setGameState(5);
+                                    setGameState(6);
                                 }}>
                                     <ImCross className="w-full h-full" color="red" />
                                 </Card>
                                 <Card className="p-2 w-full h-full cursor-pointer" onClick={() => {
                                     setResponse(true);
-                                    setGameState(5);
+                                    setGameState(6);
                                 }}>
                                     <ImCheckmark className="w-full h-full" color="green"/>
                                 </Card>
