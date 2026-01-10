@@ -34,6 +34,7 @@ class AuthController extends Controller
                     'username',
                     'email',
                     'theme',
+                    'profile_picture_url',
                 ]),
             ], 200);
         }
@@ -95,6 +96,7 @@ class AuthController extends Controller
                 'username',
                 'email',
                 'theme',
+                'profile_picture_url',
             ])
         ], 200);
     }
@@ -112,6 +114,7 @@ class AuthController extends Controller
                 'username',
                 'email',
                 'theme',
+                'profile_picture_url',
             ])
         ], 200);
     }
@@ -127,8 +130,8 @@ class AuthController extends Controller
         ], 200);
     }
 
-    public function profilePicture() {
-        $user = Auth::user();
+    public function profilePicture($username) {
+        $user = User::where('username', $username)->firstOrFail();
 
         if (!$user || !$user->profile_picture_path) {
             abort(404);

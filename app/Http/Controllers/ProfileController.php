@@ -7,7 +7,9 @@ use \App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
@@ -16,17 +18,55 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
+        // Validazione
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
             'surname' => 'required|string|max:255',
             'username' => 'required|string|max:255|unique:users,username,' . $user->id,
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'theme' => 'nullable|string|in:system,light,dark',
+            'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'remove_image' => ['nullable'], // Aggiunto per validare il flag
         ]);
 
+        // LOGICA IMMAGINI
+
+        // A. Se l'utente vuole rimuovere l'immagine attuale
+        if ($request->boolean('remove_image')) {
+            if ($user->profile_picture_path && Storage::disk('local')->exists($user->profile_picture_path)) {
+                Storage::disk('local')->delete($user->profile_picture_path);
+            }
+            $validatedData['profile_picture_path'] = null;
+            $validatedData['profile_picture_mime'] = null;
+        }
+
+        // B. Se l'utente sta caricando una NUOVA immagine (sovrascrive eventuale rimozione)
+        if ($request->hasFile('profile_picture')) {
+            // 1. Cancella la vecchia immagine se esiste (e se non è già stata tolta al passo A)
+            //    Nota: controlliamo $user->getOriginal perché validatedData potrebbe averlo già settato a null sopra
+            $oldPath = $user->getOriginal('profile_picture_path');
+            if ($oldPath && Storage::disk('local')->exists($oldPath)) {
+                Storage::disk('local')->delete($oldPath);
+            }
+
+            // 2. Salva la nuova
+            $file = $request->file('profile_picture');
+            // FIX: Specifica 'local' come terzo parametro per essere sicuri vada in private
+            $path = $file->storeAs('ProfilePictures', $request->username . "_" . $file->getClientOriginalName(), 'local');
+
+            // FIX CRITICO: Assegno a $validatedData, così user->update() lo salva davvero!
+            $validatedData['profile_picture_path'] = $path;
+            $validatedData['profile_picture_mime'] = $file->getClientMimeType();
+        }
+
+        // Aggiorna DB
         $user->update($validatedData);
 
-        return response()->json(['message' => 'Profile updated successfully', 'user' => $user->only(['id', 'name', 'surname', 'username', 'email'])]);
+        return response()->json([
+            'message' => 'Profile updated successfully',
+            // Ricarica user da DB per avere i dati freschi (incluso l'accessor URL)
+            'user' => $user->fresh()->only(['id', 'name', 'surname', 'username', 'email', 'theme', 'profile_picture_url'])
+        ]);
     }
 
     public function checkEditUsername(String $username)
@@ -101,4 +141,7 @@ class ProfileController extends Controller
             'message' => 'Password updated successfully'
         ], 200);
     }
+
+    // todo delete profile picture
+    public function deleteProfilePicture(Request $request) {}
 }

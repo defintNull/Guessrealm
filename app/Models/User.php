@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class User extends Authenticatable
 {
@@ -38,6 +39,10 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    protected $appends = [
+        'profile_picture_url',
+    ];
+
     /**
      * Get the attributes that should be cast.
      *
@@ -49,5 +54,17 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    protected function profilePictureUrl(): ?Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                if ($this->profile_picture_path) {
+                    return route('user.avatar', ['username' => $this->username]);
+                }
+                return null;
+            }
+        );
     }
 }

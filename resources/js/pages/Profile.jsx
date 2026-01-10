@@ -29,6 +29,11 @@ import { useAuth } from "@/context/AuthProvider";
 import { toast } from "sonner";
 import useDebounce from "@/hooks/useDebounce";
 import { useTheme } from "@/context/ThemeProvider";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const MAX_MB = 2 * 1024 * 1024;
+const ALLOWED_FORMAT = ["image/jpeg", "image/png", "image/webp"];
 
 export default function Profile() {
     //Inizializzazione stato
@@ -50,7 +55,9 @@ export default function Profile() {
     const [error, setError] = useState([]);
     const [isCheckingUsername, setIsCheckingUsername] = useState(false);
     const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-    const [selectedTheme, setSelectedTheme] = useState(theme)
+    const [selectedTheme, setSelectedTheme] = useState(theme);
+    const [preview, setPreview] = useState(user?.profile_picture_url || null);
+    const [removeImage, setRemoveImage] = useState(false);
 
     const debouncedUsername = useDebounce(username, 500);
     const debouncedEmail = useDebounce(email, 500);
@@ -64,6 +71,13 @@ export default function Profile() {
             setEmail(user.email ?? "");
             setUsername(user.username ?? "");
             setTheme(user.theme || "system");
+            if (user.profile_picture_url) {
+                setPreview(
+                    `${user.profile_picture_url}?t=${new Date().getTime()}`
+                );
+            } else {
+                setPreview(null);
+            }
         }
     }, [user]);
 
@@ -119,10 +133,16 @@ export default function Profile() {
         form.append("surname", surname);
         form.append("email", email);
         form.append("username", username);
-        form.append("theme", theme)
+        form.append("theme", selectedTheme);
 
         if (profile_picture) {
             form.append("profile_picture", profile_picture);
+        }
+
+        if (removeImage) {
+            form.append("remove_image", true);
+            console.log("aggiunto remove_image");
+            console.log(removeImage);
         }
 
         try {
@@ -171,6 +191,13 @@ export default function Profile() {
                         if (errors?.username) {
                             setErrorUsername(
                                 errors.username.map((el) => {
+                                    return { message: el };
+                                })
+                            );
+                        }
+                        if (errors?.profile_picture) {
+                            setErrorProfilePicture(
+                                errors.profile_picture.map((el) => {
                                     return { message: el };
                                 })
                             );
@@ -242,6 +269,102 @@ export default function Profile() {
         }
     };
 
+    // #region immagine del profilo
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+
+        // 1. Se l'utente ha aperto la finestra ma poi ha cliccato "Annulla", file sarà undefined.
+        if (!file) return;
+
+        // 2. Controllo Dimensione (Guard Clause 1)
+        if (file.size > MAX_MB) {
+            toast.error("File is too large. Max size is 2MB.");
+            return; // STOP! Non procedere oltre.
+        }
+
+        // 3. Controllo Formato (Guard Clause 2)
+        // Se la lista dei formati permessi NON (!) include il tipo del file...
+        if (!ALLOWED_FORMAT.includes(file.type)) {
+            toast.error("Invalid file format. Please upload JPG, PNG or WEBP.");
+            return; // STOP!
+        }
+
+        // 4. Se siamo arrivati qui, il file è valido!
+        setProfilePicture(file);
+
+        // Importante: Se l'utente aveva cliccato "Rimuovi" ma poi carica una nuova foto,
+        // dobbiamo resettare il flag di rimozione.
+        setRemoveImage(false);
+    };
+
+    // fix per memory leak
+    useEffect(() => {
+        if (profile_picture) {
+            const previewUrl = URL.createObjectURL(profile_picture);
+            setPreview(previewUrl);
+        }
+        return () => {
+            if (preview) {
+                URL.revokeObjectURL(preview);
+            }
+        };
+    }, [profile_picture]);
+
+    const handleRemoveImage = (e) => {
+        setProfilePicture(null);
+        setPreview(null);
+        setRemoveImage(true);
+    };
+
+    // #endregion
+
+    // Se l'utente non è ancora pronto, mostriamo lo scheletro
+    if (!user) {
+        return (
+            <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
+                <Card className="min-w-md">
+                    <CardContent className="pt-6">
+                        <div className="flex flex-col gap-6">
+                            {/* Titolo */}
+                            <Skeleton className="h-8 w-32" />
+
+                            {/* Blocco Avatar */}
+                            <div className="flex items-center gap-4">
+                                <Skeleton className="h-20 w-20 rounded-full" />
+                                <div className="flex flex-col gap-2">
+                                    <Skeleton className="h-10 w-32" />{" "}
+                                    {/* Bottone finto */}
+                                </div>
+                            </div>
+
+                            {/* Campi Input */}
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-16" />{" "}
+                                    {/* Label */}
+                                    <Skeleton className="h-10 w-full" />{" "}
+                                    {/* Input */}
+                                </div>
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-16" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Skeleton className="h-4 w-16" />
+                                    <Skeleton className="h-10 w-full" />
+                                </div>
+                            </div>
+
+                            {/* Bottone Save */}
+                            <div className="flex justify-end pt-4">
+                                <Skeleton className="h-10 w-24" />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
@@ -253,6 +376,50 @@ export default function Profile() {
                             <FieldTitle className="text-xl font-semibold">
                                 Edit Profile
                             </FieldTitle>
+
+                            <div className="flex items-center gap-4">
+                                {/* Immagine circolare */}
+                                <Avatar className="h-20 w-20">
+                                    <AvatarImage src={preview} />
+                                    <AvatarFallback>
+                                        {name?.charAt(0).toUpperCase()}
+                                        {surname?.charAt(0).toUpperCase()}
+                                    </AvatarFallback>
+                                </Avatar>
+
+                                <div className="flex flex-col gap-2">
+                                    {/* Input nascosto */}
+                                    <Input
+                                        accept="image/png,image/jpeg,image/webp"
+                                        type="file"
+                                        id="picture-upload"
+                                        className="hidden" // Nascondilo con CSS
+                                        onChange={handleImageChange}
+                                    />
+
+                                    {/* Bottone che agisce come label per l'input */}
+                                    <Button asChild variant="outline">
+                                        <label
+                                            htmlFor="picture-upload"
+                                            className="cursor-pointer"
+                                        >
+                                            Change Photo
+                                        </label>
+                                    </Button>
+
+                                    {/* Bottone Rimuovi - mostralo solo se c'è una preview diversa dal default */}
+                                    {preview !== "/default-avatar.png" && (
+                                        <Button
+                                            variant="destructive"
+                                            type="button" // Importante: altrimenti fa submit del form!
+                                            onClick={handleRemoveImage}
+                                        >
+                                            Remove
+                                        </Button>
+                                    )}
+                                </div>
+                                <FieldError errors={error_profile_picture} />
+                            </div>
 
                             <Field data-invalid={error_name.length > 0}>
                                 <FieldLabel>Name</FieldLabel>
@@ -282,7 +449,9 @@ export default function Profile() {
                                 <FieldLabel>Theme</FieldLabel>
                                 <Select
                                     value={selectedTheme}
-                                    onValueChange={(value) => {setSelectedTheme(value)}}
+                                    onValueChange={(value) => {
+                                        setSelectedTheme(value);
+                                    }}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select a theme" />

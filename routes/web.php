@@ -11,6 +11,8 @@ Route::get('/', function () {
     return view('App');
 });
 
+Route::get('avatar/{username}', [AuthController::class, 'profilePicture'])->name('user.avatar');
+
 Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(function() {
     Route::middleware('guest')->group(function() {
         Route::post("/login", [AuthController::class, 'login'])
