@@ -39,7 +39,7 @@ export default function Password() {
         // Validazione pre-invio (opzionale ma consigliata)
         if (new_password !== confirm_password) {
             setErrorConfirmPassword([
-                { message: "Le password non coincidono!" },
+                { message: "Passwords does not match!" },
             ]);
             return;
         }

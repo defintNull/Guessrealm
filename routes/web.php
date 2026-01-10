@@ -5,7 +5,6 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Middleware\SPAMiddleware;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProfileController;
 
 Route::get('/', function () {
     return view('App');
@@ -28,10 +27,10 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
         Route::get("/me", [AuthController::class, 'me'])
             ->name('me');
 
-        Route::post('/updateTheme', [ProfileController::class, 'updateTheme'])
-            ->name('updateTheme');
+        // Route::post('/updateTheme', [AuthController::class, 'updateTheme'])
+        //     ->name('updateTheme');
 
-        Route::post('/updatePassword', [ProfileController::class, 'updatePassword'])
+        Route::post('/updatePassword', [AuthController::class, 'updatePassword'])
             ->name('updatePassword');
 
         Route::post('/logout', [AuthController::class, 'logout'])
@@ -45,13 +44,13 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->withoutMiddleware([SPAMiddleware::class])
             ->name('profile');
 
-        Route::get('/checkEditUsername/{username}', [ProfileController::class, 'checkEditUsername'])
+        Route::get('/checkUsername/{username}', [AuthController::class, 'checkUsername'])
             ->name('check_edit_username');
 
-        Route::get('/checkEditEmail/{email}', [ProfileController::class, 'checkEditEmail'])
+        Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
             ->name('check_edit_email');
 
-        Route::post('/profileUpdate', [ProfileController::class, 'update'])
+        Route::post('/profileUpdate', [AuthController::class, 'update'])
             ->name('profile_update');
 
         Route::name('game.')->prefix('game')->group(function() {

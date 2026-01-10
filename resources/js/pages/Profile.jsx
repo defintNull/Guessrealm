@@ -31,6 +31,7 @@ import useDebounce from "@/hooks/useDebounce";
 import { useTheme } from "@/context/ThemeProvider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "react-router-dom";
 
 const MAX_MB = 2 * 1024 * 1024;
 const ALLOWED_FORMAT = ["image/jpeg", "image/png", "image/webp"];
@@ -99,7 +100,7 @@ export default function Profile() {
             setIsCheckingUsername(true); // Attiva il messaggio "checking..."
             try {
                 const res = await axios.get(
-                    `spa/checkEditUsername/${debouncedUsername.trim()}`
+                    `spa/checkUsername/${debouncedUsername.trim()}`
                 );
 
                 if (res.data.exists) {
@@ -234,7 +235,7 @@ export default function Profile() {
             setIsCheckingEmail(true);
             try {
                 const res = await axios.get(
-                    `spa/checkEditEmail/${debouncedEmail.trim()}`
+                    `spa/checkEmail/${debouncedEmail.trim()}`
                 );
                 if (res.data.exists) {
                     setErrorEmail([{ message: "Email already exists" }]);
@@ -520,8 +521,11 @@ export default function Profile() {
                             </Field>
                             <FieldError errors={error} />
                         </FieldGroup>
-                        <div className="flex flex-col w-full items-end justify-center pt-6 pr-4">
-                            <Button>Save Changes</Button>
+                        <div className="flex w-full items-end justify-center pt-6 pr-4 gap-4">
+                            <Button type="submit">Save Changes</Button>
+                            <Button asChild variant="outline" type="button">
+                                <Link to="/password">Change Password</Link>
+                            </Button>
                         </div>
                     </form>
                 </CardContent>

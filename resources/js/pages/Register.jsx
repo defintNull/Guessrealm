@@ -53,7 +53,7 @@ export default function Register() {
             setIsCheckingUsername(true); // Attiva il messaggio "checking..."
             try {
                 const res = await axios.get(
-                    `spa/checkEditUsername/${debouncedUsername.trim()}`
+                    `spa/checkUsername/${debouncedUsername.trim()}`
                 );
 
                 if (res.data.exists) {
@@ -89,7 +89,7 @@ export default function Register() {
             setIsCheckingEmail(true);
             try {
                 const res = await axios.get(
-                    `spa/checkEditEmail/${debouncedEmail.trim()}`
+                    `spa/checkEmail/${debouncedEmail.trim()}`
                 );
                 if (res.data.exists) {
                     setErrorEmail([{ message: "Email already exists" }]);
@@ -108,6 +108,12 @@ export default function Register() {
 
     async function handleSubmit(event) {
         event.preventDefault();
+
+        //controllo password
+        if (password !== confirm_password) {
+            setErrorConfirmPassword([{ message: "Passwords does not match!" }]);
+            return;
+        }
 
         let form = new FormData();
 
