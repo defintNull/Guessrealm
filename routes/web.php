@@ -12,8 +12,15 @@ Route::get('/', function () {
 
 Route::get('avatar/{username}', [AuthController::class, 'profilePicture'])->name('user.avatar');
 
-Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(function() {
-    Route::middleware('guest')->group(function() {
+Route::get('/checkUsername/{username}', [AuthController::class, 'checkUsername'])
+    ->name('check_username');
+
+Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
+    ->name('check_email');
+
+
+Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(function () {
+    Route::middleware('guest')->group(function () {
         Route::post("/login", [AuthController::class, 'login'])
             ->middleware('throttle:login')
             ->name('login');
@@ -23,7 +30,7 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->name('register');
     });
 
-    Route::middleware('auth')->group(function() {
+    Route::middleware('auth')->group(function () {
         Route::get("/me", [AuthController::class, 'me'])
             ->name('me');
 
@@ -44,16 +51,10 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->withoutMiddleware([SPAMiddleware::class])
             ->name('profile');
 
-        Route::get('/checkUsername/{username}', [AuthController::class, 'checkUsername'])
-            ->name('check_edit_username');
-
-        Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
-            ->name('check_edit_email');
-
         Route::post('/profileUpdate', [AuthController::class, 'update'])
             ->name('profile_update');
 
-        Route::name('game.')->prefix('game')->group(function() {
+        Route::name('game.')->prefix('game')->group(function () {
             Route::post('photos', [PhotoController::class, 'index'])
                 ->name('photos');
             Route::get('photo/show/{id}', [PhotoController::class, 'show'])
@@ -61,7 +62,7 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
                 ->name('photo.show');
         });
 
-        Route::name('ai.')->prefix('ai')->group(function() {
+        Route::name('ai.')->prefix('ai')->group(function () {
             Route::get('aimodel', [AiController::class, 'getModel'])
                 ->name('getModel');
 

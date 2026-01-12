@@ -214,6 +214,10 @@ class AuthController extends Controller
     {
         $user = Auth::user();
 
+        if (!$user) {
+            return response()->json(['exists' => User::where('username', $username)->exists()]);
+        }
+
         $exists = User::where('username', $username)
             ->where('id', '!=', $user->id)
             ->exists();
@@ -224,6 +228,10 @@ class AuthController extends Controller
     public function checkEmail(String $email)
     {
         $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['exists' => User::where('email', $email)->exists()]);
+        }
 
         $exists = User::where('email', $email)
             ->where('id', '!=', $user->id)

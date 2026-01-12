@@ -56,7 +56,7 @@ const formSchema = z.object({
         .max(255)
         .refine(
             async (value) => {
-                const response = await axios.get(`spa/checkUsername/${value}`);
+                const response = await axios.get(`checkUsername/${value}`);
                 return !response.data.exists;
             },
             {
@@ -71,7 +71,7 @@ const formSchema = z.object({
         .email()
         .refine(
             async (value) => {
-                const response = await axios.get(`spa/checkEmail/${value}`);
+                const response = await axios.get(`checkEmail/${value}`);
                 return !response.data.exists;
             },
             {
