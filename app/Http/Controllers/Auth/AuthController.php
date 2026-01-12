@@ -17,8 +17,8 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $request->validate([
-            'username' => ['required', 'string'],
-            'password' => ['required', 'string']
+            'username' => ['required', 'string', 'max:255'],
+            'password' => ['required', 'string', 'max:255', 'min:8']
         ]);
 
         if (Auth::attempt([
@@ -50,10 +50,10 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $request->validate([
-            'name' => ['required', 'string'],
-            'surname' => ['required', 'string'],
-            'email' => ['required', 'email', 'unique:users,email'],
-            'username' => ['required', 'string', 'unique:users,username'],
+            'name' => ['required', 'string', 'max:255'],
+            'surname' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email', 'max:255'],
+            'username' => ['required', 'string', 'unique:users,username', 'max:255'],
             'password' => [
                 'required',
                 'string',
@@ -63,7 +63,7 @@ class AuthController extends Controller
                     ->symbols()
             ],
             'profile_picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
-            'confirm_password' => ['required', 'string'],
+            'confirm_password' => ['required', 'string', 'max:255', 'min:8'],
             'theme' => ['sometimes', 'string', 'in:system,light,dark'],
         ]);
 

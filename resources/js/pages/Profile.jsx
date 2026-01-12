@@ -5,6 +5,8 @@ import axios from "axios";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
     Field,
     FieldContent,
@@ -32,243 +34,167 @@ import { useTheme } from "@/context/ThemeProvider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
+import { email, z } from "zod";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
 
 const MAX_MB = 2 * 1024 * 1024;
 const ALLOWED_FORMAT = ["image/jpeg", "image/png", "image/webp"];
 
+let renderCount = 0;
+
+const formSchema = z.object({
+    name: z
+        .string()
+        .min(1)
+        .max(255)
+        .refine(
+            async (value) => {
+                const response = await axios.get(`spa/checkUsername/${value}`);
+                return !response.data.exists;
+            },
+            {
+                message: "Username already exists",
+            }
+        ),
+    surname: z.string().min(1).max(255),
+    email: z
+        .string()
+        .min(1)
+        .max(255)
+        .email()
+        .refine(
+            async (value) => {
+                const response = await axios.get(`spa/checkEmail/${value}`);
+                return !response.data.exists;
+            },
+            {
+                message: "Email already exists",
+            }
+        ),
+    profile_picture: z
+        .any()
+        .refine(
+            (file) => !file || file.size <= MAX_MB,
+            "File too large (max 2MB)"
+        )
+        .refine(
+            (file) => !file || ALLOWED_FORMAT.includes(file.type),
+            "Format not supported"
+        )
+        .optional(),
+    username: z.string().min(1).max(255),
+    selectedTheme: z.enum(["system", "light", "dark"]),
+    removeImage: z.boolean().optional(),
+});
+
 export default function Profile() {
+    renderCount++;
+    console.log("RenderCount: " + renderCount);
+
+    const form = useForm({
+        resolver: zodResolver(formSchema),
+        mode: "onBlur",
+        defaultValues: {
+            name: "",
+            surname: "",
+            email: "",
+            username: "",
+            selectedTheme: "system",
+            removeImage: false,
+        },
+    });
+
     //Inizializzazione stato
     // #region contesti, stati e custom hooks
     let navigate = useNavigate();
     const { user, setUser } = useAuth();
     const { theme, setTheme } = useTheme();
 
-    const [name, setName] = useState("");
-    const [surname, setSurname] = useState("");
-    const [email, setEmail] = useState("");
-    const [profile_picture, setProfilePicture] = useState(null);
-    const [username, setUsername] = useState("");
-    const [error_name, setErrorName] = useState([]);
-    const [error_surname, setErrorSurname] = useState([]);
-    const [error_email, setErrorEmail] = useState([]);
-    const [error_profile_picture, setErrorProfilePicture] = useState([]);
-    const [error_username, setErrorUsername] = useState([]);
-    const [error, setError] = useState([]);
-    const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-    const [selectedTheme, setSelectedTheme] = useState(theme);
     const [preview, setPreview] = useState(user?.profile_picture_url || null);
-    const [removeImage, setRemoveImage] = useState(false);
 
-    const debouncedUsername = useDebounce(username, 500);
-    const debouncedEmail = useDebounce(email, 500);
     // #endregion
 
     // Carica i dati dell'utente quando il componente viene montato
     useEffect(() => {
         if (user) {
-            setName(user.name ?? "");
-            setSurname(user.surname ?? "");
-            setEmail(user.email ?? "");
-            setUsername(user.username ?? "");
-            setTheme(user.theme || "system");
-            if (user.profile_picture_url) {
-                setPreview(
-                    `${user.profile_picture_url}?t=${new Date().getTime()}`
-                );
-            } else {
-                setPreview(null);
-            }
+            // Popoliamo il form con i dati che arrivano dal context
+            form.reset({
+                name: user.name || "",
+                surname: user.surname || "",
+                email: user.email || "",
+                username: user.username || "",
+                selectedTheme: user.theme || "system",
+                removeImage: false,
+            });
         }
-    }, [user]);
+    }, [user, form.reset]);
 
-    //username
-    // Questo effetto parte ogni volta che cambia 'debouncedUsername'
-    useEffect(() => {
-        // 1. Se lo username è vuoto o è uguale a quello attuale dell'utente, pulisci errori e fermati.
-        if (
-            !debouncedUsername ||
-            (user && debouncedUsername === user.username)
-        ) {
-            setErrorUsername([]);
-            setIsCheckingUsername(false);
-            return;
-        }
-
-        // 2. Funzione asincrona per fare la chiamata
-        const checkUsername = async () => {
-            setIsCheckingUsername(true); // Attiva il messaggio "checking..."
-            try {
-                const res = await axios.get(
-                    `spa/checkUsername/${debouncedUsername.trim()}`
-                );
-
-                if (res.data.exists) {
-                    setErrorUsername([{ message: "Username already exists" }]);
-                } else {
-                    setErrorUsername([]); // Tutto ok
-                }
-            } catch (err) {
-                console.log(err);
-            } finally {
-                setIsCheckingUsername(false); // Spegni lo spinner
-            }
-        };
-
-        // 3. Esegui la funzione
-        checkUsername();
-    }, [debouncedUsername, user]);
-
-    async function handleSubmit(event) {
-        event.preventDefault();
-
-        setErrorName([]);
-        setErrorSurname([]);
-        setErrorEmail([]);
-        setErrorUsername([]);
-        setError([]);
-
-        let form = new FormData();
-
-        form.append("name", name);
-        form.append("surname", surname);
-        form.append("email", email);
-        form.append("username", username);
-        form.append("theme", selectedTheme);
-
-        if (profile_picture) {
-            form.append("profile_picture", profile_picture);
-        }
-
-        if (removeImage) {
-            form.append("remove_image", true);
-            console.log("aggiunto remove_image");
-            console.log(removeImage);
-        }
-
+    async function onSubmit(values) {
         try {
-            let res = await axios.post("spa/profileUpdate", form, {
+            const formData = new FormData();
+            formData.append("name", values.name);
+            formData.append("surname", values.surname);
+            formData.append("email", values.email);
+            formData.append("username", values.username);
+            formData.append("theme", values.selectedTheme);
+
+            if (values.profile_picture) {
+                formData.append("profile_picture", values.profile_picture);
+            }
+
+            // Laravel riceve i booleani spesso come 1/0 o stringhe
+            formData.append("removeImage", values.removeImage ? "1" : "0");
+
+            let res = await axios.post("/spa/profileUpdate", formData, {
                 headers: {
                     "Content-Type": "multipart/form-data",
                 },
             });
 
-            //aggiorna user nel context
+            // Successo
             setUser(res.data.user);
-
-            //aggiornamento del tema
-            setTheme(selectedTheme);
-
-            // mostra messaggio di successo
+            setTheme(values.selectedTheme);
             toast.success("Profile updated successfully!");
         } catch (error) {
             if (error.response) {
-                if (error.response.status == 429) {
-                    setError(["Too many request!"]);
-                } else if (error.response.status == 422) {
-                    if (error.response.data?.errors) {
-                        let errors = error.response.data?.errors;
-                        if (errors?.name) {
-                            setErrorName(
-                                errors.name.map((el) => {
-                                    return { message: el };
-                                })
-                            );
-                        }
-                        if (errors?.surname) {
-                            setErrorSurname(
-                                errors.surname.map((el) => {
-                                    return { message: el };
-                                })
-                            );
-                        }
-                        if (errors?.email) {
-                            setErrorEmail(
-                                errors.email.map((el) => {
-                                    return { message: el };
-                                })
-                            );
-                        }
-                        if (errors?.username) {
-                            setErrorUsername(
-                                errors.username.map((el) => {
-                                    return { message: el };
-                                })
-                            );
-                        }
-                        if (errors?.profile_picture) {
-                            setErrorProfilePicture(
-                                errors.profile_picture.map((el) => {
-                                    return { message: el };
-                                })
-                            );
-                        }
-                    }
+                const { status, data } = error.response;
+
+                if (status === 422) {
+                    // Mappiamo gli errori di Laravel sui campi di Zod
+                    const serverErrors = data.errors; // Esempio: { email: ["Già presa"], username: [...] }
+
+                    Object.keys(serverErrors).forEach((key) => {
+                        form.setError(key, {
+                            type: "server",
+                            message: serverErrors[key][0], // Prendiamo il primo messaggio dell'array
+                        });
+                    });
+
+                    toast.error("Please check the highlighted fields.");
+                } else if (status === 429) {
+                    form.setError("root", {
+                        message: "Too many requests. Try again later.",
+                    });
+                    toast.error("Too many requests!");
                 } else {
-                    setError(["Something whent wrong!"]);
+                    form.setError("root", {
+                        message: "A server error occurred.",
+                    });
+                    toast.error("Something went wrong!");
                 }
+            } else {
+                console.error(error);
+                toast.error("Connection error.");
             }
         }
     }
-
-    // useEffect per l'email
-    useEffect(() => {
-        // 1. Se vuoto o uguale all'email attuale, resetta e esci
-        if (!debouncedEmail || (user && debouncedEmail === user.email)) {
-            setErrorEmail([]);
-            setIsCheckingEmail(false);
-            return;
-        }
-
-        // 2. NUOVO: Controllo Formato Email (Regex)
-        // Questa regex controlla: testo + @ + testo + . + testo
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!emailRegex.test(debouncedEmail)) {
-            setErrorEmail([{ message: "Invalid email format" }]);
-            setIsCheckingEmail(false);
-            return; // STOP! Non contattare il server se il formato è sbagliato
-        }
-
-        // 3. Se il formato è giusto, controlla se esiste nel database
-        const checkEmail = async () => {
-            setIsCheckingEmail(true);
-            try {
-                const res = await axios.get(
-                    `spa/checkEmail/${debouncedEmail.trim()}`
-                );
-                if (res.data.exists) {
-                    setErrorEmail([{ message: "Email already exists" }]);
-                } else {
-                    setErrorEmail([]);
-                }
-            } catch (err) {
-                console.log(err);
-            } finally {
-                setIsCheckingEmail(false);
-            }
-        };
-
-        checkEmail();
-    }, [debouncedEmail, user]);
-
-    const handleUsernameChange = (e) => {
-        // Aggiorna lo stato mentre scrivi (per far vedere le lettere a schermo)
-        setUsername(e.target.value);
-
-        // Opzionale: Pulisce l'errore visivo mentre l'utente sta ancora scrivendo
-        if (error_username.length > 0) {
-            setErrorUsername([]);
-        }
-    };
-
-    const handleEmailChange = (e) => {
-        setEmail(e.target.value);
-
-        if (error_email.length > 0) {
-            setErrorEmail([]);
-        }
-    };
 
     // #region immagine del profilo
     const handleImageChange = (e) => {
@@ -291,30 +217,44 @@ export default function Profile() {
         }
 
         // 4. Se siamo arrivati qui, il file è valido!
-        setProfilePicture(file);
+        form.setValue("profile_picture", file);
 
         // Importante: Se l'utente aveva cliccato "Rimuovi" ma poi carica una nuova foto,
         // dobbiamo resettare il flag di rimozione.
-        setRemoveImage(false);
+        form.setValue("removeImage", false);
+
+        //aggiorniamo l'anteprima
+        const previewUrl = URL.createObjectURL(file);
+        setPreview(previewUrl);
     };
 
-    // fix per memory leak
+    // 1. "Estrai" il valore dal form per usarlo come dipendenza
+    const profilePictureValue = form.watch("profile_picture");
+
     useEffect(() => {
-        if (profile_picture) {
-            const previewUrl = URL.createObjectURL(profile_picture);
-            setPreview(previewUrl);
+        // Se non c'è un file (perché è null o è una stringa URL esistente), non fare nulla
+        if (!profilePictureValue || !(profilePictureValue instanceof File)) {
+            return;
         }
+
+        // Crea l'URL per il file selezionato
+        const objectUrl = URL.createObjectURL(profilePictureValue);
+        setPreview(objectUrl);
+
+        // FUNZIONE DI PULIZIA (Cleanup)
+        // Questa funzione gira PRIMA che l'effetto venga eseguito di nuovo
+        // o quando il componente viene smontato.
         return () => {
-            if (preview) {
-                URL.revokeObjectURL(preview);
-            }
+            URL.revokeObjectURL(objectUrl);
+            // È buona norma resettare la preview a null se il file sparisce
+            // ma attenzione a non sovrascrivere l'immagine del server se presente
         };
-    }, [profile_picture]);
+    }, [profilePictureValue]); // L'effetto parte solo quando cambia il file
 
     const handleRemoveImage = (e) => {
-        setProfilePicture(null);
+        form.setValue("profile_picture", null);
+        form.setValue("removeImage", true);
         setPreview(null);
-        setRemoveImage(true);
     };
 
     // #endregion
@@ -371,35 +311,41 @@ export default function Profile() {
         <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
             <Toaster position="top-right" richColors />
             <Card className="min-w-md">
-                <CardContent>
-                    <form onSubmit={handleSubmit}>
-                        <FieldGroup>
+                <CardContent className="pt-6">
+                    <Form {...form}>
+                        <form
+                            onSubmit={form.handleSubmit(onSubmit)}
+                            className="space-y-6"
+                        >
                             <FieldTitle className="text-xl font-semibold">
                                 Edit Profile
                             </FieldTitle>
 
+                            {/* SEZIONE AVATAR */}
                             <div className="flex items-center gap-4">
-                                {/* Immagine circolare */}
                                 <Avatar className="h-20 w-20">
                                     <AvatarImage src={preview} />
                                     <AvatarFallback>
-                                        {name?.charAt(0).toUpperCase()}
-                                        {surname?.charAt(0).toUpperCase()}
+                                        {user?.name?.charAt(0).toUpperCase()}
+                                        {user?.surname?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
 
                                 <div className="flex flex-col gap-2">
-                                    {/* Input nascosto */}
+                                    {/* Input file nascosto gestito manualmente per la preview */}
                                     <Input
-                                        accept="image/png,image/jpeg,image/webp"
                                         type="file"
                                         id="picture-upload"
-                                        className="hidden" // Nascondilo con CSS
+                                        className="hidden"
+                                        accept="image/png,image/jpeg,image/webp"
                                         onChange={handleImageChange}
                                     />
 
-                                    {/* Bottone che agisce come label per l'input */}
-                                    <Button asChild variant="outline">
+                                    <Button
+                                        asChild
+                                        variant="outline"
+                                        type="button"
+                                    >
                                         <label
                                             htmlFor="picture-upload"
                                             className="cursor-pointer"
@@ -408,126 +354,159 @@ export default function Profile() {
                                         </label>
                                     </Button>
 
-                                    {/* Bottone Rimuovi - mostralo solo se c'è una preview diversa dal default */}
-                                    {preview !== "/default-avatar.png" && (
+                                    {/* Pulsante Rimuovi gestito tramite watch */}
+                                    {preview && !form.watch("removeImage") && (
                                         <Button
                                             variant="destructive"
-                                            type="button" // Importante: altrimenti fa submit del form!
+                                            type="button"
                                             onClick={handleRemoveImage}
                                         >
                                             Remove
                                         </Button>
                                     )}
                                 </div>
-                                <FieldError errors={error_profile_picture} />
                             </div>
 
-                            <Field data-invalid={error_name.length > 0}>
-                                <FieldLabel>Name</FieldLabel>
-                                <Input
-                                    autocoplete="given-name"
-                                    placeholder="Name"
-                                    required
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    aria-invalid={error_name.length > 0}
-                                ></Input>
-                                <FieldError errors={error_name} />
-                            </Field>
-                            <Field data-invalid={error_surname.length > 0}>
-                                <FieldLabel>Surname</FieldLabel>
-                                <Input
-                                    autocoplete="family-name"
-                                    placeholder="Surname"
-                                    required
-                                    value={surname}
-                                    onChange={(e) => setSurname(e.target.value)}
-                                    aria-invalid={error_surname.length > 0}
-                                ></Input>
-                                <FieldError errors={error_surname} />
-                            </Field>
-                            <Field>
-                                <FieldLabel>Theme</FieldLabel>
-                                <Select
-                                    value={selectedTheme}
-                                    onValueChange={(value) => {
-                                        setSelectedTheme(value);
-                                    }}
+                            {/* CAMPO NOME */}
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Name</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                autoComplete="given-name"
+                                                placeholder="Name"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* CAMPO COGNOME */}
+                            <FormField
+                                control={form.control}
+                                name="surname"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Surname</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                autoComplete="family-name"
+                                                placeholder="Surname"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* CAMPO TEMA */}
+                            <FormField
+                                control={form.control}
+                                name="selectedTheme"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Theme</FormLabel>
+                                        <Select
+                                            onValueChange={field.onChange}
+                                            value={field.value}
+                                        >
+                                            <FormControl>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select a theme" />
+                                                </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                                <SelectItem value="system">
+                                                    System
+                                                </SelectItem>
+                                                <SelectItem value="light">
+                                                    Light
+                                                </SelectItem>
+                                                <SelectItem value="dark">
+                                                    Dark
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* CAMPO EMAIL */}
+                            <FormField
+                                control={form.control}
+                                name="email"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Email</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                autoComplete="email"
+                                                placeholder="Email"
+                                                type="email"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        {/* Feedback disponibilità asincrona */}
+                                        {form.formState.isValidating &&
+                                            field.value && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    Checking availability...
+                                                </p>
+                                            )}
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* CAMPO USERNAME */}
+                            <FormField
+                                control={form.control}
+                                name="username"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Username</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                autoComplete="username"
+                                                placeholder="Username"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* ERRORI ROOT (ERRORE SERVER GENERALE) */}
+                            {form.formState.errors.root && (
+                                <p className="text-sm font-medium text-destructive">
+                                    {form.formState.errors.root.message}
+                                </p>
+                            )}
+
+                            {/* PULSANTI AZIONE */}
+                            <div className="flex w-full items-center justify-end gap-4 pt-6">
+                                <Button asChild variant="outline" type="button">
+                                    <Link to="/password">Change Password</Link>
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={form.formState.isSubmitting}
                                 >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select a theme" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="system">
-                                            System
-                                        </SelectItem>
-                                        <SelectItem value="light">
-                                            Light
-                                        </SelectItem>
-                                        <SelectItem value="dark">
-                                            Dark
-                                        </SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </Field>
-                            <Field data-invalid={error_email.length > 0}>
-                                <FieldLabel>Email</FieldLabel>
-                                <Input
-                                    autocoplete="email"
-                                    placeholder="Email"
-                                    required
-                                    value={email}
-                                    onChange={handleEmailChange}
-                                    aria-invalid={error_email.length > 0}
-                                    type="email"
-                                ></Input>
-                                <FieldError errors={error_email} />
-                                {isCheckingEmail && (
-                                    <span>Checking email...</span>
-                                )}
-                                {!isCheckingEmail &&
-                                    email === debouncedEmail &&
-                                    error_email.length === 0 &&
-                                    user?.email !== email &&
-                                    email && (
-                                        <span style={{ color: "green" }}>
-                                            Email is available!
-                                        </span>
-                                    )}
-                            </Field>
-                            <Field data-invalid={error_username.length > 0}>
-                                <FieldLabel>Userame</FieldLabel>
-                                <Input
-                                    autocoplete="username"
-                                    placeholder="Username"
-                                    required
-                                    value={username}
-                                    onChange={handleUsernameChange}
-                                    aria-invalid={error_username.length > 0}
-                                ></Input>
-                                <FieldError errors={error_username} />
-                                {isCheckingUsername && (
-                                    <span>Checking username...</span>
-                                )}
-                                {!isCheckingUsername &&
-                                    username === debouncedUsername &&
-                                    error_username.length === 0 &&
-                                    username !== user?.username &&
-                                    username && (
-                                        <span style={{ color: "green" }}>
-                                            Username is available!
-                                        </span>
-                                    )}
-                            </Field>
-                            <FieldError errors={error} />
-                        </FieldGroup>
-                        <div className="flex w-full items-end justify-center pt-6 pr-4 gap-4">
-                            <Button type="submit">Save Changes</Button>
-                            <Button asChild variant="outline" type="button">
-                                <Link to="/password">Change Password</Link>
-                            </Button>
-                        </div>
-                    </form>
+                                    {form.formState.isSubmitting
+                                        ? "Saving..."
+                                        : "Save Changes"}
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
                 </CardContent>
             </Card>
         </div>

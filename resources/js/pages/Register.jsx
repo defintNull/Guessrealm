@@ -343,23 +343,7 @@ export default function Register() {
                                     placeholder="Confirm password"
                                     required
                                     value={confirm_password}
-                                    onChange={(e) => {
-                                        let current_psw = e.target.value;
-                                        setConfirmPassword(current_psw);
-                                        if (
-                                            current_psw == "" ||
-                                            current_psw == password
-                                        ) {
-                                            setErrorConfirmPassword([]);
-                                        } else if (current_psw != password) {
-                                            setErrorConfirmPassword([
-                                                {
-                                                    message:
-                                                        "Password doesn't match!",
-                                                },
-                                            ]);
-                                        }
-                                    }}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
                                     aria-invalid={
                                         error_confirm_password.length > 0
                                     }
