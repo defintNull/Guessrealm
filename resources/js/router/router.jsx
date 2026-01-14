@@ -12,6 +12,7 @@ import Password from "@/pages/Password";
 import Multiplayer from "@/pages/Multiplayer";
 import CreateLobby from "@/pages/CreateLobby";
 import JoinLobby from "@/pages/JoinLobby";
+import Lobby from "@/pages/Lobby";
 
 
 const router = createBrowserRouter([
@@ -55,6 +56,14 @@ const router = createBrowserRouter([
                         element: (
                             <AuthMiddleware>
                                 <JoinLobby />
+                            </AuthMiddleware>
+                        )
+                    },
+                    {
+                        path: "lobby",
+                        element: (
+                            <AuthMiddleware>
+                                <Lobby />
                             </AuthMiddleware>
                         )
                     },
