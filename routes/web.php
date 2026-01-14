@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Middleware\SPAMiddleware;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ChatController;
 
 Route::get('/', function () {
     return view('App');
@@ -33,9 +34,6 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
     Route::middleware('auth')->group(function () {
         Route::get("/me", [AuthController::class, 'me'])
             ->name('me');
-
-        // Route::post('/updateTheme', [AuthController::class, 'updateTheme'])
-        //     ->name('updateTheme');
 
         Route::post('/updatePassword', [AuthController::class, 'updatePassword'])
             ->name('updatePassword');

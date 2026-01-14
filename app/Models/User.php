@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class User extends Authenticatable
 {
@@ -67,5 +69,15 @@ class User extends Authenticatable
                 return null;
             }
         );
+    }
+
+    public function messages(): HasMany
+    {
+        return $this->hasMany(\App\Models\Message::class);
+    }
+
+    public function chats(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\Chat::class)->withTimestamps();
     }
 }
