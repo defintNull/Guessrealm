@@ -1,90 +1,154 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Controller, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-  FieldLegend,
-  FieldSeparator,
-  FieldSet,
-  FieldTitle,
-} from "@/components/ui/field"
-import { Input } from "@/components/ui/input"
+    Field,
+    FieldContent,
+    FieldDescription,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+    FieldLegend,
+    FieldSeparator,
+    FieldSet,
+    FieldTitle,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthProvider";
+import { z } from "zod";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
 
+const loginSchema = z.object({
+    username: z.string().min(1, "Insert Username").max(255),
+    password: z.string().min(8, "Insert Password").max(255),
+});
 
 export default function Login() {
+    
     let navigate = useNavigate();
     const { setUser } = useAuth();
 
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [error, setError] = useState("");
+    //setup form
+    const form = useForm({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            username: "",
+            password: "",
+        },
+    });
 
-    async function handleSubmit(event) {
-        event.preventDefault();
+    async function onSubmit(values) {
 
-        try{
-            await axios.get('/sanctum/csrf-cookie');
-            let res = await axios.post('spa/login', {
-                'username': username,
-                'password': password
-            });
+        try {
+            await axios.get("/sanctum/csrf-cookie");
+            let res = await axios.post("spa/login", values);
             setUser(res.data.user);
             navigate("/");
         } catch (error) {
-            if(error.response) {
-                if(error.response.status == 429) {
-                    setError("Too many request!");
-                } else if(error.response.status == 401) {
-                    setError(error.response.data?.errors);
+            if (error.response) {
+                const status = error.response.status;
+                if (status == 401) {
+                    form.setError("root", {
+                        message: "Wrong credentials!",
+                    });
+                } else if (status == 429) {
+                    form.setError("root", {
+                        message: "Too many requests!",
+                    });
                 } else {
-                    setError("Something whent wrong!");
+                    form.setError("root", {
+                        message: "Something went wrong!",
+                    });
                 }
             }
         }
     }
 
-    return <div className="w-full min-h-svh flex flex-col items-center justify-center">
-        <Card className="min-w-md">
-            <CardContent>
-                <form onSubmit={handleSubmit}>
-                    <FieldGroup>
-                        <FieldTitle className="text-xl font-semibold">Login</FieldTitle>
-                        <Field data-invalid={!!error}>
-                            <FieldLabel>Username</FieldLabel>
-                            <Input
-                                placeholder="Username"
-                                required
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                aria-invalid={!!error}
-                                ></Input>
-                        </Field>
-                        <Field data-invalid={!!error}>
-                            <FieldLabel>Password</FieldLabel>
-                            <Input
-                                placeholder="Password"
-                                required
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                aria-invalid={!!error}
-                                type="password"
-                                ></Input>
-                        </Field>
-                        {error && <FieldError>{error}</FieldError>}
-                    </FieldGroup>
-                    <div className="flex flex-col w-full items-end justify-center pt-6 pr-4">
-                        <Button>Login</Button>
-                    </div>
-                </form>
-            </CardContent>
-        </Card>
-    </div>
+    return (
+        <div className="w-full min-h-svh flex flex-col items-center justify-center">
+            <Card className="min-w-md">
+                <CardHeader>
+                    <CardTitle className="text-xl font-semibold">
+                        Login
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {/* Form Wrapper */}
+                    <Form {...form}>
+                        <form
+                            onSubmit={form.handleSubmit(onSubmit)}
+                            className="space-y-4"
+                        >
+                            {/* CAMPO USERNAME */}
+                            <FormField
+                                control={form.control}
+                                name="username"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Username</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                placeholder="Username"
+                                                autoComplete="username"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* CAMPO PASSWORD */}
+                            <FormField
+                                control={form.control}
+                                name="password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                type="password"
+                                                placeholder="Password"
+                                                autoComplete="password"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* AREA ERRORI GENERICI (ROOT) */}
+                            {/* Se c'è un errore generale (es. 401), lo mostriamo qui */}
+                            {form.formState.errors.root && (
+                                <div className="text-red-500 text-sm font-medium">
+                                    {form.formState.errors.root.message}
+                                </div>
+                            )}
+
+                            {/* Pulsante */}
+                            <div className="flex flex-col w-full items-end justify-center pt-2">
+                                {/* Il bottone disabilita il click mentre sta inviando (isSubmitting) */}
+                                <Button
+                                    type="submit"
+                                    disabled={form.formState.isSubmitting}
+                                >
+                                    Login
+                                </Button>
+                            </div>
+                        </form>
+                    </Form>
+                </CardContent>
+            </Card>
+        </div>
+    );
 }

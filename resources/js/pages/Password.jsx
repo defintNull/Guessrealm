@@ -3,184 +3,165 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-    Field,
-    FieldError,
-    FieldGroup,
-    FieldLabel,
-    FieldTitle,
-} from "@/components/ui/field";
+import { FieldTitle } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthProvider";
 import { toast, Toaster } from "sonner";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const formSchema = z
+    .object({
+        current_password: z.string().min(1, "Current password is required"),
+        new_password: z
+            .string()
+            .min(8, "New password must be at least 8 characters long"),
+        confirm_new_password: z
+            .string()
+            .min(8, "Please confirm your new password"),
+    })
+    .refine((data) => data.new_password === data.confirm_new_password, {
+        message: "Passwords do not match",
+        path: ["confirm_new_password"],
+    });
 
 export default function Password() {
     let navigate = useNavigate();
     const { user } = useAuth();
 
-    // 1. Uniformiamo i nomi: usiamo camelCase per React (setNewPassword)
-    // e snake_case per il backend se serve.
-    const [new_password, setNewPassword] = useState("");
-    const [confirm_password, setConfirmPassword] = useState("");
+    const form = useForm({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+            current_password: "",
+            new_password: "",
+            confirm_new_password: "",
+        },
+        mode: "onBlur",
+    });
 
-    // Stati per gli errori
-    const [error_newpassword, setErrorNewPassword] = useState([]);
-    const [error_confirm_password, setErrorConfirmPassword] = useState([]);
-    const [error, setError] = useState([]);
-
-    async function handleSubmit(event) {
-        event.preventDefault();
-
-        // Reset degli errori generali prima di riprovare
-        setError([]);
-
-        // Validazione pre-invio (opzionale ma consigliata)
-        if (new_password !== confirm_password) {
-            setErrorConfirmPassword([
-                { message: "Le password non coincidono!" },
-            ]);
-            return;
-        }
-
-        let form = new FormData();
-        form.append("new_password", new_password);
-        form.append("confirm_password", confirm_password);
-
-        try {
-            // Assicurati di mettere l'URL corretto nel post
-            let res = await axios.post("/spa/updatePassword", form, {
-                headers: {
-                    "Content-Type": "multipart/form-data",
-                },
+async function onSubmit(values) {
+    try {
+        await axios.post('/spa/updatePassword', {
+            current_password: values.current_password,
+            new_password: values.new_password,
+            confirm_password: values.confirm_new_password,
+        });
+        toast.success("Password updated successfully");
+        form.reset();
+    } catch (error) {
+        if (error.response && error.response.status === 422) {
+            const serverErrors = error.response.data.errors;
+            Object.keys(serverErrors).forEach((key) => {
+                form.setError(key, {
+                    type: "server",
+                    message: serverErrors[key][0],
+                });
             });
-            // navigate("/login");
-            toast.success("Password Changed!");
-        } catch (error) {
-            if (error.response) {
-                if (error.response.status === 429) {
-                    setError([{ message: "Too many requests!" }]);
-                } else if (error.response.status === 422) {
-                    if (error.response.data?.errors) {
-                        let errors = error.response.data?.errors;
-
-                        // NOTA: Qui i nomi devono corrispondere a quelli che Laravel ti rimanda
-                        // Solitamente Laravel usa i nomi dei campi del form ('new_password')
-                        if (errors?.new_password) {
-                            setErrorNewPassword(
-                                errors.new_password.map((el) => ({
-                                    message: el,
-                                }))
-                            );
-                        }
-                        // Fallback: se Laravel risponde con 'password' invece di 'new_password'
-                        if (errors?.password) {
-                            setErrorNewPassword(
-                                errors.password.map((el) => ({ message: el }))
-                            );
-                        }
-
-                        if (errors?.confirm_password) {
-                            setErrorConfirmPassword(
-                                errors.confirm_password.map((el) => ({
-                                    message: el,
-                                }))
-                            );
-                        }
-                    }
-                } else {
-                    setError([{ message: "Something went wrong!" }]);
-                }
-            }
+        } else {
+            // Errore generico che appare sopra il pulsante (root)
+            form.setError("root", {
+                message: "Something went wrong. Please try again."
+            });
         }
     }
+}
 
     return (
         <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
             <Toaster position="top-right" richColors />
             <Card className="min-w-md">
                 <CardContent>
-                    <form onSubmit={handleSubmit}>
-                        <FieldGroup>
-                            <FieldTitle className="text-xl font-semibold">
-                                Change Password
-                            </FieldTitle>
-
-                            {/* Questo input è invisibile ma dice al browser chi è l'utente */}
-                            <input
-                                type="text"
-                                name="username"
-                                autoComplete="username"
-                                value= {useAuth().user.username}
-                                style={{ display: "none" }}
-                                readOnly
+                    <Form {...form}>
+                        <form
+                            onSubmit={form.handleSubmit(onSubmit)}
+                            className="space-y-6"
+                        >
+                            <FieldTitle>Change Password</FieldTitle>
+                            {/* Campo per la password attuale */}
+                            <FormField
+                                control={form.control}
+                                name="current_password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Current Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                autoComplete="current-password"
+                                                type="password"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
                             />
 
-                            {/* CAMPO 1: Nuova Password */}
-                            <Field data-invalid={error_newpassword.length > 0}>
-                                <FieldLabel htmlFor="new_password">Password</FieldLabel>
-                                <Input
-                                    id="new_password"
-                                    placeholder="Password"
-                                    required
-                                    value={new_password}
-                                    onChange={(e) =>
-                                        setNewPassword(e.target.value)
-                                    }
-                                    aria-invalid={error_newpassword.length > 0}
-                                    type="password"
-                                    name="new_password" // Utile per i password manager
-                                    autoComplete="new-password"
-                                />
-                                <FieldError errors={error_newpassword} />
-                            </Field>
+                            {/* Campo per la nuova password */}
+                            <FormField
+                                control={form.control}
+                                name="new_password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>New Password</FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                autoComplete="new-password"
+                                                type="password"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
 
-                            {/* CAMPO 2: Conferma Password */}
-                            <Field
-                                data-invalid={error_confirm_password.length > 0}
+                            {/* Campo per la conferma della nuova password */}
+                            <FormField
+                                control={form.control}
+                                name="confirm_new_password"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>
+                                            Confirm New Password
+                                        </FormLabel>
+                                        <FormControl>
+                                            <Input
+                                                autoComplete="new-password"
+                                                type="password"
+                                                {...field}
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            {/* ERRORI ROOT (ERRORE SERVER GENERALE) */}
+                            {form.formState.errors.root && (
+                                <p className="text-sm font-medium text-destructive">
+                                    {form.formState.errors.root.message}
+                                </p>
+                            )}
+
+                            <Button
+                                type="submit"
+                                disabled={form.formState.isSubmitting}
                             >
-                                <FieldLabel htmlFor="confirm_password">Confirm password</FieldLabel>
-                                <Input
-                                    id="confirm_password"
-                                    placeholder="Confirm password"
-                                    required
-                                    value={confirm_password}
-                                    onChange={(e) => {
-                                        let current_val = e.target.value;
-                                        setConfirmPassword(current_val);
-
-                                        if (
-                                            current_val === "" ||
-                                            current_val === new_password
-                                        ) {
-                                            setErrorConfirmPassword([]);
-                                        } else {
-                                            // Non mostrare errore mentre sta ancora scrivendo la prima lettera
-                                            if (new_password.length > 0) {
-                                                setErrorConfirmPassword([
-                                                    {
-                                                        message:
-                                                            "Password doesn't match!",
-                                                    },
-                                                ]);
-                                            }
-                                        }
-                                    }}
-                                    aria-invalid={
-                                        error_confirm_password.length > 0
-                                    }
-                                    type="password"
-                                    name="confirm_password"
-                                    autoComplete="new-password"
-                                />
-                                <FieldError errors={error_confirm_password} />
-                            </Field>
-
-                            <FieldError errors={error} />
-                        </FieldGroup>
-                        <div className="flex flex-col w-full items-end justify-center pt-6 pr-4">
-                            <Button type="submit">Change Password</Button>
-                        </div>
-                    </form>
+                                {form.formState.isSubmitting
+                                    ? "Updating..."
+                                    : "Update Password"}
+                            </Button>
+                        </form>
+                    </Form>
                 </CardContent>
             </Card>
         </div>
