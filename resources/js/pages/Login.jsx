@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/form";
 
 const loginSchema = z.object({
-    username: z.string().min(1, "Insert Usersname").max(255),
+    username: z.string().min(1, "Insert Username").max(255),
     password: z.string().min(8, "Insert Password").max(255),
 });
 

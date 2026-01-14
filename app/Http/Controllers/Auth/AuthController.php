@@ -30,6 +30,7 @@ class AuthController extends Controller
             $user = Auth::user();
             return response()->json([
                 'status' => 'OK',
+                'message' => 'Login successful',
                 'user' => $user->only([
                     'id',
                     'name',
@@ -43,7 +44,8 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'errors' => 'Wrong credentials!'
+            'status' => 'error',
+            'message' => 'Wrong credentials'
         ], 401);
     }
 
@@ -96,6 +98,7 @@ class AuthController extends Controller
 
         return response()->json([
             'status' => 'OK',
+            'message' => 'Registration successful',
             'user' => $user->only([
                 'id',
                 'name',
@@ -135,7 +138,8 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return response()->json([
-            'status' => 'OK'
+            'status' => 'OK',
+            'message' => 'Logged out successfully'
         ], 200);
     }
 
@@ -150,10 +154,20 @@ class AuthController extends Controller
         if (!Storage::disk('local')->exists($user->profile_picture_path)) {
             abort(404);
         }
+        $path = Storage::disk('local')->path($user->profile_picture_path);
+        $lastModified = Storage::disk('local')->lastModified($user->profile_picture_path);
+        $etag = md5($user->profile_picture_path . '|' . $lastModified);
 
-        return response()->file(
-            Storage::disk('local')->path($user->profile_picture_path)
-        );
+        // Handle conditional request
+        if (request()->headers->get('If-None-Match') === $etag) {
+            return response('', 304)->header('ETag', $etag)
+                ->header('Cache-Control', 'public, max-age=3600');
+        }
+
+        return response()->file($path, [
+            'Cache-Control' => 'public, max-age=3600',
+            'ETag' => $etag,
+        ]);
     }
 
     public function update(Request $request)
@@ -204,8 +218,9 @@ class AuthController extends Controller
         $user->update($validatedData);
 
         return response()->json([
+            'status' => 'OK',
             'message' => 'Profile updated successfully',
-            // Ricarica user da DB per avere i dati freschi (incluso l'accessor URL)
+            // Reload user from DB to get fresh data (including URL accessor)
             'user' => $user->fresh()->only(['id', 'name', 'surname', 'username', 'email', 'theme', 'profile_picture_url'])
         ]);
     }
@@ -240,32 +255,9 @@ class AuthController extends Controller
         return response()->json(['exists' => $exists]);
     }
 
-    // public function updateTheme(Request $request): JsonResponse
-    // {
-    //     // 1. Validazione: Accettiamo solo i tre valori permessi
-    //     $request->validate([
-    //         'theme' => ['required', 'string', 'in:system,light,dark']
-    //     ]);
-
-    //     /** @var \App\Models\User $user */
-    //     $user = Auth::user();
-
-    //     // 2. Aggiornamento del dato
-    //     $user->update([
-    //         'theme' => $request->theme
-    //     ]);
-
-    //     // 3. Risposta
-    //     return response()->json([
-    //         'status' => 'OK',
-    //         'message' => 'Theme updated successfully',
-    //         'theme' => $user->theme
-    //     ], 200);
-    // }
-
     public function updatePassword(Request $request)
     {
-        // 1. Controllo validazione
+        // Validation
         $request->validate([
             'current_password' => ['required', 'string'],
             'new_password' => ['required', 'string', 'min:8', 'max:255', Password::min(8)
@@ -277,14 +269,14 @@ class AuthController extends Controller
 
         $user = $request->user();
 
-        // 2. Controllo vecchia password
+        // Check current password
         if (!Hash::check($request->current_password, $user->password)) {
             throw ValidationException::withMessages([
                 'current_password' => ['Password does not match our records.'],
             ]);
         }
 
-        // 3. Aggiornamento
+        // Update password
         $user->update([
             'password' => Hash::make($request->new_password),
         ]);

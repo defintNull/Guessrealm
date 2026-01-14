@@ -1,4 +1,5 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
+import axios from "axios";
 import { useState } from "react";
 
 import {
@@ -12,6 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/context/AuthProvider";
 import { Card } from "@/components/ui/card";
+import { Toaster, toast } from "sonner";
 
 export default function DefaultLayout() {
     const navigate = useNavigate();
@@ -27,12 +29,15 @@ export default function DefaultLayout() {
             await axios.post('/spa/logout');
             setUser(null);
             navigate("/");
+            toast.success("Logged out successfully");
         } catch (error) {
+            toast.error("Logout failed");
         }
     }
 
     return (
         <div className="flex flex-col w-full min-h-svh py-4 px-8">
+            <Toaster position="top-right" richColors />
             <div className="flex justify-end pr-4 py-2 z-10">
                 <NavigationMenu>
                     {user ? (

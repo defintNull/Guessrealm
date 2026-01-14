@@ -5,6 +5,7 @@ import axios from "axios";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import ImageCropDialog from "@/components/ImageCropDialog";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -29,12 +30,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthProvider";
 import { toast } from "sonner";
-import useDebounce from "@/hooks/useDebounce";
 import { useTheme } from "@/context/ThemeProvider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
-import { email, z } from "zod";
+import { z } from "zod";
 import {
     Form,
     FormControl,
@@ -47,10 +47,8 @@ import {
 const MAX_MB = 2 * 1024 * 1024;
 const ALLOWED_FORMAT = ["image/jpeg", "image/png", "image/webp"];
 
-let renderCount = 0;
-
 const formSchema = z.object({
-    name: z
+    username: z
         .string()
         .min(1)
         .max(255)
@@ -63,6 +61,7 @@ const formSchema = z.object({
                 message: "Username already exists",
             }
         ),
+        name: z.string().min(1).max(255),
     surname: z.string().min(1).max(255),
     email: z
         .string()
@@ -89,15 +88,11 @@ const formSchema = z.object({
             "Format not supported"
         )
         .optional(),
-    username: z.string().min(1).max(255),
     selectedTheme: z.enum(["system", "light", "dark"]),
     removeImage: z.boolean().optional(),
 });
 
 export default function Profile() {
-    renderCount++;
-    console.log("RenderCount: " + renderCount);
-
     const form = useForm({
         resolver: zodResolver(formSchema),
         mode: "onBlur",
@@ -118,6 +113,9 @@ export default function Profile() {
     const { theme, setTheme } = useTheme();
 
     const [preview, setPreview] = useState(user?.profile_picture_url || null);
+    const [cropOpen, setCropOpen] = useState(false);
+    const [cropSrc, setCropSrc] = useState(null);
+    const [originalFile, setOriginalFile] = useState(null);
 
     // #endregion
 
@@ -149,8 +147,8 @@ export default function Profile() {
                 formData.append("profile_picture", values.profile_picture);
             }
 
-            // Laravel riceve i booleani spesso come 1/0 o stringhe
-            formData.append("removeImage", values.removeImage ? "1" : "0");
+            // Laravel receives booleans as 1/0 or strings
+            formData.append("remove_image", values.removeImage ? "1" : "0");
 
             let res = await axios.post("/spa/profileUpdate", formData, {
                 headers: {
@@ -167,13 +165,13 @@ export default function Profile() {
                 const { status, data } = error.response;
 
                 if (status === 422) {
-                    // Mappiamo gli errori di Laravel sui campi di Zod
-                    const serverErrors = data.errors; // Esempio: { email: ["Già presa"], username: [...] }
+                    // Map Laravel errors to form fields
+                    const serverErrors = data.errors;
 
                     Object.keys(serverErrors).forEach((key) => {
                         form.setError(key, {
                             type: "server",
-                            message: serverErrors[key][0], // Prendiamo il primo messaggio dell'array
+                            message: serverErrors[key][0], // Take first message from array
                         });
                     });
 
@@ -196,60 +194,55 @@ export default function Profile() {
         }
     }
 
-    // #region immagine del profilo
+    // #region profile picture handling
     const handleImageChange = (e) => {
         const file = e.target.files[0];
 
-        // 1. Se l'utente ha aperto la finestra ma poi ha cliccato "Annulla", file sarà undefined.
+        // 1. If user cancelled file selection, file will be undefined
         if (!file) return;
 
-        // 2. Controllo Dimensione (Guard Clause 1)
+        // 2. File size validation (Guard Clause 1)
         if (file.size > MAX_MB) {
             toast.error("File is too large. Max size is 2MB.");
-            return; // STOP! Non procedere oltre.
+            return; // STOP! Do not proceed
         }
 
-        // 3. Controllo Formato (Guard Clause 2)
-        // Se la lista dei formati permessi NON (!) include il tipo del file...
+        // 3. File format validation (Guard Clause 2)
         if (!ALLOWED_FORMAT.includes(file.type)) {
             toast.error("Invalid file format. Please upload JPG, PNG or WEBP.");
             return; // STOP!
         }
 
-        // 4. Se siamo arrivati qui, il file è valido!
-        form.setValue("profile_picture", file);
+        // 4. Open crop dialog with selected image, preserve original format
+        const objectUrl = URL.createObjectURL(file);
+        setCropSrc(objectUrl);
+        setOriginalFile(file);
+        setCropOpen(true);
 
-        // Importante: Se l'utente aveva cliccato "Rimuovi" ma poi carica una nuova foto,
-        // dobbiamo resettare il flag di rimozione.
+        // Reset removal flag if previously set
         form.setValue("removeImage", false);
-
-        //aggiorniamo l'anteprima
-        const previewUrl = URL.createObjectURL(file);
-        setPreview(previewUrl);
     };
 
-    // 1. "Estrai" il valore dal form per usarlo come dipendenza
+    // 1. Extract value from form to use as dependency
     const profilePictureValue = form.watch("profile_picture");
 
     useEffect(() => {
-        // Se non c'è un file (perché è null o è una stringa URL esistente), non fare nulla
+        // If there's no file (null or existing URL string), do nothing
         if (!profilePictureValue || !(profilePictureValue instanceof File)) {
             return;
         }
 
-        // Crea l'URL per il file selezionato
+        // Create URL for selected file
         const objectUrl = URL.createObjectURL(profilePictureValue);
         setPreview(objectUrl);
 
-        // FUNZIONE DI PULIZIA (Cleanup)
-        // Questa funzione gira PRIMA che l'effetto venga eseguito di nuovo
-        // o quando il componente viene smontato.
+        // CLEANUP FUNCTION
+        // This function runs BEFORE the effect runs again
+        // or when the component unmounts
         return () => {
             URL.revokeObjectURL(objectUrl);
-            // È buona norma resettare la preview a null se il file sparisce
-            // ma attenzione a non sovrascrivere l'immagine del server se presente
         };
-    }, [profilePictureValue]); // L'effetto parte solo quando cambia il file
+    }, [profilePictureValue]); // Effect runs only when file changes
 
     const handleRemoveImage = (e) => {
         form.setValue("profile_picture", null);
@@ -257,9 +250,16 @@ export default function Profile() {
         setPreview(null);
     };
 
+    // Cleanup cropSrc object URL when dialog closes
+    useEffect(() => {
+        return () => {
+            if (cropSrc) URL.revokeObjectURL(cropSrc);
+        };
+    }, [cropSrc]);
+
     // #endregion
 
-    // Se l'utente non è ancora pronto, mostriamo lo scheletro
+    // If user data is not ready yet, show skeleton
     if (!user) {
         return (
             <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
@@ -479,6 +479,9 @@ export default function Profile() {
                                                 {...field}
                                             />
                                         </FormControl>
+                                         {form.formState.isValidating && field.value && (
+                                             <p className="text-xs text-muted-foreground">Checking availability...</p>
+                                         )}
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -509,6 +512,25 @@ export default function Profile() {
                     </Form>
                 </CardContent>
             </Card>
+            {/* Crop Dialog */}
+            <ImageCropDialog
+                open={cropOpen}
+                onOpenChange={(open) => {
+                    if (!open && cropSrc) {
+                        URL.revokeObjectURL(cropSrc);
+                        setCropSrc(null);
+                        setOriginalFile(null);
+                    }
+                    setCropOpen(open);
+                }}
+                imageSrc={cropSrc}
+                originalFile={originalFile}
+                fileName={user?.username || "profile-picture"}
+                onCropComplete={(file, url) => {
+                    form.setValue("profile_picture", file);
+                    setPreview(url);
+                }}
+            />
         </div>
     );
 }

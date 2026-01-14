@@ -4,7 +4,6 @@ import axios from "axios";
 import { useEffect } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import useDebounce from "@/hooks/useDebounce";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -28,9 +27,12 @@ import {
     FieldTitle,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import ImageCropDialog from "@/components/ImageCropDialog";
 import { useAuth } from "@/context/AuthProvider";
 import { toast, Toaster } from "sonner";
 import { z } from "zod";
+ 
 
 const MAX_MB = 2 * 1024 * 1024;
 const ALLOWED_FORMAT = ["image/jpeg", "image/png", "image/webp"];
@@ -63,7 +65,17 @@ const formSchema = z
             }, "Username taken"),
         password: z.string().min(8, "Min 8 characters"),
         confirm_password: z.string().min(1, "Please confirm your password"),
-        profile_picture: z.any().optional(),
+        profile_picture: z
+            .any()
+            .refine(
+                (file) => !file || file.size <= MAX_MB,
+                "File too large (max 2MB)"
+            )
+            .refine(
+                (file) => !file || ALLOWED_FORMAT.includes(file.type),
+                "Format not supported"
+            )
+            .optional(),
     })
     .refine((data) => data.password === data.confirm_password, {
         message: "Passwords do not match",
@@ -73,10 +85,14 @@ const formSchema = z
 export default function Register() {
     let navigate = useNavigate();
     const { setUser } = useAuth();
+    const [preview, setPreview] = useState(null);
+    const [cropOpen, setCropOpen] = useState(false);
+    const [cropSrc, setCropSrc] = useState(null);
+    const [originalFile, setOriginalFile] = useState(null);
 
     const form = useForm({
         resolver: zodResolver(formSchema),
-        reValidateMode: "onChange",
+        reValidateMode: "onBlur",
         defaultValues: {
             name: "",
             surname: "",
@@ -129,6 +145,39 @@ export default function Register() {
             }
         }
     }
+
+    // Profile picture change handler with validations and crop dialog
+    const handleImageChange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (file.size > MAX_MB) {
+            toast.error("File is too large. Max size is 2MB.");
+            return;
+        }
+        if (!ALLOWED_FORMAT.includes(file.type)) {
+            toast.error("Invalid file format. Please upload JPG, PNG or WEBP.");
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        setCropSrc(objectUrl);
+        setOriginalFile(file);
+        setCropOpen(true);
+    };
+
+    const handleRemoveImage = () => {
+        setPreview(null);
+        // Clear form value
+        form.setValue("profile_picture", null);
+    };
+
+    // Cleanup cropSrc object URL when dialog closes
+    useEffect(() => {
+        return () => {
+            if (cropSrc) URL.revokeObjectURL(cropSrc);
+        };
+    }, [cropSrc]);
 
     return (
         <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
@@ -197,6 +246,9 @@ export default function Register() {
                                                 {...field}
                                             />
                                         </FormControl>
+                                        {form.formState.isValidating && field.value && (
+                                            <p className="text-xs text-muted-foreground">Checking availability...</p>
+                                        )}
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -216,34 +268,57 @@ export default function Register() {
                                                 {...field}
                                             />
                                         </FormControl>
+                                        {form.formState.isValidating && field.value && (
+                                            <p className="text-xs text-muted-foreground">Checking availability...</p>
+                                        )}
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
 
-                            {/* FOTO PROFILO */}
+                            {/* PROFILE PICTURE (with preview + crop) */}
                             <FormField
                                 control={form.control}
                                 name="profile_picture"
-                                render={({
-                                    field: { value, onChange, ...fieldProps },
-                                }) => (
+                                render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>Profile Picture</FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                type="file"
-                                                accept={ALLOWED_FORMAT.join(
-                                                    ","
+                                        <div className="flex items-center gap-4">
+                                            <Avatar className="h-20 w-20">
+                                                <AvatarImage src={preview} />
+                                                <AvatarFallback>
+                                                    {(form.watch("name") || "")
+                                                        .charAt(0)
+                                                        .toUpperCase()}
+                                                    {(form.watch("surname") || "")
+                                                        .charAt(0)
+                                                        .toUpperCase()}
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex flex-col gap-2">
+                                                <Input
+                                                    type="file"
+                                                    id="register-picture-upload"
+                                                    className="hidden"
+                                                    accept="image/png,image/jpeg,image/webp"
+                                                    onChange={handleImageChange}
+                                                />
+                                                <Button asChild variant="outline" type="button">
+                                                    <label htmlFor="register-picture-upload" className="cursor-pointer">
+                                                        Change Photo
+                                                    </label>
+                                                </Button>
+                                                {preview && (
+                                                    <Button
+                                                        variant="destructive"
+                                                        type="button"
+                                                        onClick={handleRemoveImage}
+                                                    >
+                                                        Remove
+                                                    </Button>
                                                 )}
-                                                onChange={(e) =>
-                                                    onChange(
-                                                        e.target.files?.[0]
-                                                    )
-                                                }
-                                                {...fieldProps}
-                                            />
-                                        </FormControl>
+                                            </div>
+                                        </div>
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -308,6 +383,25 @@ export default function Register() {
                     </Form>
                 </CardContent>
             </Card>
+            {/* Crop Dialog */}
+            <ImageCropDialog
+                open={cropOpen}
+                onOpenChange={(open) => {
+                    if (!open && cropSrc) {
+                        URL.revokeObjectURL(cropSrc);
+                        setCropSrc(null);
+                        setOriginalFile(null);
+                    }
+                    setCropOpen(open);
+                }}
+                imageSrc={cropSrc}
+                originalFile={originalFile}
+                fileName={form.watch("username") || "profile-picture"}
+                onCropComplete={(file, url) => {
+                    form.setValue("profile_picture", file);
+                    setPreview(url);
+                }}
+            />
         </div>
     );
 }
