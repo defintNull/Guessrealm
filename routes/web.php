@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AiController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\LobbyController;
 use App\Http\Controllers\PhotoController;
 use App\Http\Middleware\SPAMiddleware;
 use Illuminate\Support\Facades\Route;
@@ -66,6 +67,26 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
 
             Route::get('aidatamodel', [AiController::class, 'getDataModel'])
                 ->name('getDataModel');
+        });
+
+        Route::name('lobby.')->prefix('lobby')->group(function() {
+            Route::get('index', [LobbyController::class, 'index'])
+                ->name('index');
+
+            Route::post('createlobby', [LobbyController::class, 'createLobby'])
+                ->name('createLobby');
+
+            Route::post('deletelobby', [LobbyController::class, 'deleteLobby'])
+                ->name('deleteLobby');
+
+            Route::post('joinlobby', [LobbyController::class, 'joinLobby'])
+                ->name('joinLobby');
+
+            Route::post('exitlobby', [LobbyController::class, 'exitLobby'])
+                ->name('exitLobby');
+
+            Route::post('setready', [LobbyController::class, 'setReady'])
+                ->name('setReady');
         });
     });
 });
