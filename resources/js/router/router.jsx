@@ -9,6 +9,9 @@ import { AuthMiddleware } from "./middlewares/AuthMiddleware";
 import Singleplayer from "@/pages/Singleplayer";
 import Profile from "@/pages/Profile";
 import Password from "@/pages/Password";
+import Multiplayer from "@/pages/Multiplayer";
+import CreateLobby from "@/pages/CreateLobby";
+import JoinLobby from "@/pages/JoinLobby";
 
 
 const router = createBrowserRouter([
@@ -21,17 +24,46 @@ const router = createBrowserRouter([
                 Component: Home
             },
             {
-                path: "/singleplayer",
+                path: "singleplayer",
                 element: (
                     <AuthMiddleware>
                         <Singleplayer />
                     </AuthMiddleware>
                 )
+            },
+            {
+                path: "multiplayer",
+                children: [
+                    {
+                        index: true,
+                        element: (
+                            <AuthMiddleware>
+                                <Multiplayer />
+                            </AuthMiddleware>
+                        ),
+                    },
+                    {
+                        path: "createlobby",
+                        element: (
+                            <AuthMiddleware>
+                                <CreateLobby />
+                            </AuthMiddleware>
+                        )
+                    },
+                    {
+                        path: "joinlobby",
+                        element: (
+                            <AuthMiddleware>
+                                <JoinLobby />
+                            </AuthMiddleware>
+                        )
+                    },
+                ]
             }
         ]
     },
     {
-        path: "/login",
+        path: "login",
         element: (
             <GuestMiddleware>
                 <Login />
@@ -39,7 +71,7 @@ const router = createBrowserRouter([
         )
     },
     {
-        path: "/register",
+        path: "register",
         element: (
             <GuestMiddleware>
                 <Register />
@@ -47,7 +79,7 @@ const router = createBrowserRouter([
         )
     },
     {
-        path: "/profile",
+        path: "profile",
         element : (
             <AuthMiddleware>
                 <Profile />
@@ -55,7 +87,7 @@ const router = createBrowserRouter([
         )
     },
     {
-        path: "/password",
+        path: "password",
         element : (
             <AuthMiddleware>
                 <Password />

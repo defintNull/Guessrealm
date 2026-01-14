@@ -31,16 +31,12 @@ export default function Home() {
                 </p>
             </div>
 
-
-
-
-
             <Button asChild variant="default" className="h-30 w-80 text-3xl">
                 <Link to="/singleplayer">Singleplayer</Link>
             </Button>
 
             <Button asChild variant="secondary" className="h-30 w-80 text-3xl">
-                <Link to="/Multiplayer">Multiplayer</Link>
+                <Link to="/multiplayer">Multiplayer</Link>
             </Button>
         </div>
     );
