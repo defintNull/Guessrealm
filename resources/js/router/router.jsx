@@ -13,6 +13,7 @@ import Multiplayer from "@/pages/Multiplayer";
 import CreateLobby from "@/pages/CreateLobby";
 import JoinLobby from "@/pages/JoinLobby";
 import Lobby from "@/pages/Lobby";
+import Testchat from "@/pages/Testchat";
 
 
 const router = createBrowserRouter([
@@ -100,6 +101,14 @@ const router = createBrowserRouter([
         element : (
             <AuthMiddleware>
                 <Password />
+            </AuthMiddleware>
+        )
+    },
+    {
+        path: "testchat",
+        element : (
+            <AuthMiddleware>
+                <Testchat />
             </AuthMiddleware>
         )
     },

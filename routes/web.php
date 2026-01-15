@@ -21,6 +21,13 @@ Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
     ->name('check_email');
 
 
+Route::get('/chats/{chatId}', [ChatController::class, 'index'])
+    ->name('chats.index');
+
+Route::post('/chats/{chatId?}', [ChatController::class, 'store'])
+    ->name('chats.store');
+
+
 Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(function () {
     Route::middleware('guest')->group(function () {
         Route::post("/login", [AuthController::class, 'login'])
@@ -69,7 +76,7 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
                 ->name('getDataModel');
         });
 
-        Route::name('lobby.')->prefix('lobby')->group(function() {
+        Route::name('lobby.')->prefix('lobby')->group(function () {
             Route::get('index', [LobbyController::class, 'index'])
                 ->name('index');
 
