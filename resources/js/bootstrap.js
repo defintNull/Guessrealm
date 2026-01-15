@@ -8,5 +8,5 @@ axios.defaults.withCredentials = true;
 axios.defaults.withXSRFToken = true;
 
 configureEcho({
-    broadcaster: "reverb",
+    broadcaster: "reverb"
 });
