@@ -32,7 +32,7 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->name('register');
     });
 
-    Route::middleware('auth')->group(function () {
+    Route::middleware('auth:sanctum')->group(function () {
         Route::get("/me", [AuthController::class, 'me'])
             ->name('me');
 
@@ -72,6 +72,12 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
         Route::name('lobby.')->prefix('lobby')->group(function() {
             Route::get('index', [LobbyController::class, 'index'])
                 ->name('index');
+
+            Route::get('show', [LobbyController::class, 'show'])
+                ->name('show');
+
+            Route::get('timer', [LobbyController::class, 'timer'])
+                ->name('timer');
 
             Route::post('createlobby', [LobbyController::class, 'createLobby'])
                 ->name('createLobby');

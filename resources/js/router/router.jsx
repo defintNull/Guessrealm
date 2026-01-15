@@ -13,6 +13,8 @@ import Multiplayer from "@/pages/Multiplayer";
 import CreateLobby from "@/pages/CreateLobby";
 import JoinLobby from "@/pages/JoinLobby";
 import Lobby from "@/pages/Lobby";
+import { LobbyProvider } from "@/context/LobbyProvider";
+import { LobbyMiddleware } from "./middlewares/LobbyMiddleware";
 
 
 const router = createBrowserRouter([
@@ -47,7 +49,9 @@ const router = createBrowserRouter([
                         path: "createlobby",
                         element: (
                             <AuthMiddleware>
-                                <CreateLobby />
+                                <LobbyProvider>
+                                    <CreateLobby />
+                                </LobbyProvider>
                             </AuthMiddleware>
                         )
                     },
@@ -55,7 +59,9 @@ const router = createBrowserRouter([
                         path: "joinlobby",
                         element: (
                             <AuthMiddleware>
-                                <JoinLobby />
+                                <LobbyProvider>
+                                    <JoinLobby />
+                                </LobbyProvider>
                             </AuthMiddleware>
                         )
                     },
@@ -63,7 +69,11 @@ const router = createBrowserRouter([
                         path: "lobby",
                         element: (
                             <AuthMiddleware>
-                                <Lobby />
+                                <LobbyProvider>
+                                    <LobbyMiddleware>
+                                        <Lobby />
+                                    </LobbyMiddleware>
+                                </LobbyProvider>
                             </AuthMiddleware>
                         )
                     },

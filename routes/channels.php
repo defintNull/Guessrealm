@@ -8,7 +8,6 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('lobby.{id}', function ($user, $id) {
-
     if (!FakeRedis::exists("lobby:$id")) {
         return false;
     }
