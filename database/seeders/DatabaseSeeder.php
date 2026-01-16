@@ -68,7 +68,7 @@ class DatabaseSeeder extends Seeder
 
         //User::factory(46)->create();
 
-        for ($i = 1; $i <= 50; $i++) {
+        for ($i = 1; $i <= 24; $i++) {
             Photo::factory()->create([
                 'path' => sprintf('GamePhotos/%06d.png', $i)
             ]);
