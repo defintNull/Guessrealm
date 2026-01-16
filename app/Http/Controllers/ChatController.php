@@ -2,70 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Message;
 use App\Models\Chat;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use App\Http\Resources\MessageResource;
+
 
 class ChatController extends Controller
 {
-    //
+    public function index(Chat $chat)
+    {
+        Gate::authorize('view', $chat);
 
-    public function index($chatId){
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
+        $messages = $chat->messages()->with('user')->oldest()->get();
 
-        $chat = Chat::find($chatId);
-        if (!$chat) {
-            return response()->json(['message' => 'Chat not found'], 404);
-        }
-
-        // Check if the user belongs to the chat (many-to-many)
-        $belongs = $chat->users()->where('users.id', $user->id)->exists();
-        if (!$belongs) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $messages = $chat->messages()->with('user')->orderBy('created_at')->get();
-        return response()->json($messages);
+        // Restituiamo una collezione di messaggi
+        return MessageResource::collection($messages);
     }
 
-    public function store(Request $request, $chatId = null)
+    public function store(Request $request, Chat $chat)
     {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
+        Gate::authorize('createMessage', $chat);
+        $data = $request->validate(['content' => 'required|string|max:2000']);
 
-        $data = $request->validate([
-            'content' => 'required|string|max:2000',
-            'chat_id' => 'nullable|integer|exists:chats,id',
-        ]);
-
-        $targetChatId = $data['chat_id'] ?? $chatId;
-        if (!$targetChatId) {
-            return response()->json(['message' => 'chat_id is required'], 422);
-        }
-
-        $chat = Chat::find($targetChatId);
-        if (!$chat) {
-            return response()->json(['message' => 'Chat not found'], 404);
-        }
-
-        // Check membership
-        $belongs = $chat->users()->where('users.id', $user->id)->exists();
-        if (!$belongs) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $message = Message::create([
-            'chat_id' => $chat->id,
-            'user_id' => $user->id,
+        $message = $chat->messages()->create([
+            'user_id' => auth()->id(),
             'content' => $data['content'],
         ]);
 
-        return response()->json($message->load('user'), 201);
+        // Restituiamo un singolo messaggio
+        return new MessageResource($message->load('user'));
     }
 }

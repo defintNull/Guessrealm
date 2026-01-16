@@ -1,52 +1,62 @@
-import React, { useState, useEffect, useRef } from 'react';
-import SideChat from '@/components/SideChat';
+import { useState, useEffect } from "react";
+import axios from "axios";
+import SideChat from "@/components/SideChat";
 
 export default function Testchat() {
-	const [messages, setMessages] = useState([]);
+    const [messages, setMessages] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-	const CHAT_ID = 1; // cambia con l'id reale della chat da testare
-	const mountedRef = useRef(true);
+    const CHAT_ID = 1; // In futuro questo arriverà probabilmente da useParams() di React Router
 
-	useEffect(() => {
-		mountedRef.current = true;
-		const controller = new AbortController();
+    useEffect(() => {
+        const controller = new AbortController();
 
-		const fetchMessages = async () => {
-			try {
-				const res = await fetch(`/chats/${CHAT_ID}`, { signal: controller.signal });
-				if (!res.ok) return;
-				const data = await res.json();
-				if (!mountedRef.current) return;
-				// normalizza i messaggi per la UI (adatta alle proprietà del backend)
-				const mapped = data.map((m) => ({
-					id: m.id,
-					user: m.user?.username ?? m.user_id ?? 'User',
-					text: m.content ?? m.text ?? '',
-					meta: { color: 'gray' },
-                    updated_at: m.updated_at ?? m.updatedAt ?? null,
-				}));
-				setMessages(mapped);
-			} catch (e) {
-				// ignore abort or network errors for simple polling
-			}
-		};
+        const fetchMessages = async () => {
+            try {
+                // Usiamo Axios per coerenza e gestione automatica dei token
+                const res = await axios.get(`/chats/${CHAT_ID}`, {
+                    signal: controller.signal,
+                });
 
-		// fetch immediately then every 3s
-		fetchMessages();
-		const id = setInterval(fetchMessages, 3000);
+                // Laravel API Resources restituiscono un oggetto con la chiave 'data'
+                // Non serve più mappare manualmente ogni campo, il backend è già allineato!
+                setMessages(res.data.data);
+                setIsLoading(false);
+            } catch (error) {
+                if (!axios.isCancel(error)) {
+                    console.error("Errore nel caricamento dei messaggi", error);
+                }
+            }
+        };
 
-		return () => {
-			mountedRef.current = false;
-			controller.abort();
-			clearInterval(id);
-		};
-	}, [CHAT_ID]);
+        // Caricamento iniziale
+        fetchMessages();
 
-	return (
-		<div className="h-screen w-screen flex bg-slate-50">
-			<div className="flex-1 h-full">
-				<SideChat chatId={CHAT_ID} messages={messages} setMessages={setMessages} className="h-full" />
-			</div>
-		</div>
-	);
+        // Polling: ogni 3 secondi controlliamo se ci sono nuovi messaggi
+        // Nota del Senior: Questo è un approccio "povero". Il vero salto di qualità
+        // sarà sostituire questo intervallo con Laravel Echo (WebSockets).
+        const intervalId = setInterval(fetchMessages, 3000);
+
+        return () => {
+            controller.abort();
+            clearInterval(intervalId);
+        };
+    }, [CHAT_ID]);
+
+    return (
+        // Il contenitore principale occupa tutta la larghezza e altezza del dispositivo
+        <div className="h-screen w-screen flex overflow-hidden bg-background">
+            {/* Qui sta il trucco: il wrapper della SideChat deve essere flex-1 
+           per prendersi tutto lo spazio orizzontale rimasto (che ora è il 100%)
+        */}
+            <div className="flex-1 h-full">
+                <SideChat
+                    chatId={CHAT_ID}
+                    messages={messages}
+                    setMessages={setMessages}
+                    className="h-full border-none shadow-none rounded-none"
+                />
+            </div>
+        </div>
+    );
 }

@@ -21,10 +21,10 @@ Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
     ->name('check_email');
 
 
-Route::get('/chats/{chatId}', [ChatController::class, 'index'])
+Route::get('/chats/{chat}', [ChatController::class, 'index'])
     ->name('chats.index');
 
-Route::post('/chats/{chatId?}', [ChatController::class, 'store'])
+Route::post('/chats/{chat?}', [ChatController::class, 'store'])
     ->name('chats.store');
 
 
