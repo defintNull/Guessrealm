@@ -9,13 +9,13 @@ class AiController extends Controller
 {
     public function getModel() {
         return response()->file(
-            Storage::disk('local')->path('Models/facial_attributes_model.onnx')
+            Storage::disk('local')->path('Models/model_webgpu.onnx')
         );
     }
 
     public function getDataModel() {
         return response()->file(
-            Storage::disk('local')->path('Models/facial_attributes_model.onnx.data')
+            Storage::disk('local')->path('Models/model_webgpu.onnx.data')
         );
     }
 }
