@@ -7,6 +7,7 @@ use App\Http\Controllers\PhotoController;
 use App\Http\Middleware\SPAMiddleware;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\MultiplayerGameController;
 
 Route::get('/', function () {
     return view('App');
@@ -93,6 +94,11 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
 
             Route::post('setready', [LobbyController::class, 'setReady'])
                 ->name('setReady');
+        });
+
+        Route::name('multiplayer.')->prefix('multiplayer')->group(function() {
+            Route::post('start', [MultiplayerGameController::class, 'startGame'])
+                ->name('start');
         });
     });
 });

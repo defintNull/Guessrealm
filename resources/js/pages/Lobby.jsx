@@ -9,10 +9,12 @@ import { useEnableLobby } from "@/context/LobbyProvider";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import Timer from "@/components/Timer";
+import { useEnableMultiplayerGame } from "@/context/MultiplayerGameProvider";
 
 export default function Lobby() {
     const navigate = useNavigate();
     const { setEnableLobby } = useEnableLobby();
+    const { setEnableMultiplayerGame } = useEnableMultiplayerGame();
     const { state } = useLocation();
 
     const [ lobbyID, setLobbyID ] = useState(state.lobby_id);
@@ -59,15 +61,15 @@ export default function Lobby() {
     }, [timer]);
 
     // Effect to enable or disable the start button based on the number of player and ready state
-    if(lobbyMode == 0) {
-        useEffect(() => {
-            if(players != null && players.filter(el => el.status).length == 2) {
-                setButtonToggle(true);
-            } else {
-                setButtonToggle(false);
-            }
-        }, [players]);
-    }
+    useEffect(() => {
+        if (lobbyMode !== 0) return;
+
+        if (players != null && players.filter(el => el.status).length === 2) {
+            setButtonToggle(true);
+        } else {
+            setButtonToggle(false);
+        }
+    }, [players, lobbyMode]);
 
     // Websocket
     useEcho(
@@ -104,6 +106,15 @@ export default function Lobby() {
             } else {
                 if(e.action == "DELETE") {
                     setDialogLobbyState(true);
+                } else if(e.action == "START") {
+                    setEnableMultiplayerGame(true);
+                    navigate("/multiplayer/game", {
+                        state: {
+                            ai_help: e.aihelp,
+                            timeout: e.timeout,
+                            game_websocket: e.game_websocket
+                        }
+                    });
                 }
             }
         }
@@ -113,7 +124,18 @@ export default function Lobby() {
     function actionButtonClickHandle(e) {
         if(lobbyMode == 0) {
             if(buttonToggle) {
-
+                axios.post('/spa/multiplayer/start', {
+                    id: lobbyID,
+                }).then((res) => {
+                    setEnableMultiplayerGame(true);
+                    navigate("/multiplayer/game", {
+                        state: {
+                            ai_help: res.data.aihelp,
+                            timeout: res.data.timeout,
+                            game_websocket: res.data.game_websocket
+                        }
+                    });
+                });
             }
         } else {
             axios.post('/spa/lobby/setready', {
