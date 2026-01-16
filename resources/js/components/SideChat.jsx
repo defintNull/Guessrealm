@@ -9,16 +9,17 @@ import { SendIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
-export default function SideChat({ chatId, messages, setMessages, ...props }) {
+export default function SideChat({
+    chatId,
+    messages,
+    setMessages,
+    isSending,
+    setIsSending,
+    ...props
+}) {
     const { user } = useAuth();
     const scrollRef = useRef(null);
     const [inputValue, setInputValue] = useState("");
-    const [isSending, setIsSending] = useState(false);
-
-    useEffect(() => {
-        // Ensure CSRF cookie is present for web POST routes (Sanctum)
-        axios.get("/sanctum/csrf-cookie").catch(() => {});
-    }, []);
 
     const sendMessage = async () => {
         const trimmedValue = inputValue.trim();
@@ -27,27 +28,23 @@ export default function SideChat({ chatId, messages, setMessages, ...props }) {
         setIsSending(true);
         setInputValue(""); // Puliamo subito l'input per dare feedback all'utente
 
-        try {
-            // Usiamo il Route Model Binding definito nel backend
-            const res = await axios.post(`/chats/${chatId}`, {
+        setMessages((prev) => [
+            ...prev,
+            {
+                id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                color: TextColor.GREEN,
                 content: trimmedValue,
-            });
-
-            // Il server ora restituisce la MessageResource!
-            const newMessage = res.data.data; // Nota: Laravel Resources avvolgono in 'data'
-
-            setMessages((prev) => [...prev, newMessage]);
-        } catch (error) {
-            // Se fallisce, potresti voler rimettere il testo nell'input o avvisare
-            setInputValue(trimmedValue);
-            const errorMsg =
-                error.response?.status === 403
-                    ? "Non hai i permessi per scrivere in questa chat"
-                    : "Errore nell'invio";
-            toast.error(errorMsg);
-        } finally {
-            setIsSending(false);
-        }
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    avatar: user.profile_picture_url,
+                },
+                time: new Date().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                }),
+            },
+        ]);
     };
 
     const textareaSubmit = (e) => {
@@ -77,9 +74,9 @@ export default function SideChat({ chatId, messages, setMessages, ...props }) {
             </CardHeader>
 
             <ScrollArea ref={scrollRef} className="flex-1 h-0 px-4">
-                {console.log(messages)}
                 {messages.map((msg, index) => {
                     // Verifichiamo se il mittente è lo stesso del messaggio precedente
+
                     const isSameUser =
                         index > 0 &&
                         messages[index - 1].user.id === msg.user.id;
@@ -95,9 +92,9 @@ export default function SideChat({ chatId, messages, setMessages, ...props }) {
                             <div className="w-8">
                                 {!isSameUser && (
                                     <Avatar className="h-8 w-8">
-                                        <AvatarImage src={msg.user.avatar} />
+                                        <AvatarImage src={msg?.user?.avatar} />
                                         <AvatarFallback>
-                                            {msg.user.username[0]}
+                                            {msg?.user?.username[0] || "S"}
                                         </AvatarFallback>
                                     </Avatar>
                                 )}
@@ -108,22 +105,18 @@ export default function SideChat({ chatId, messages, setMessages, ...props }) {
                                 {!isSameUser && (
                                     <div className="flex items-center justify-between text-[10px] mb-1">
                                         <span className="font-bold text-indigo-500 uppercase">
-                                            {msg.user.username}
+                                            {msg?.user?.username || "System"}
                                         </span>
                                         <span className="text-muted-foreground">
-                                            {msg.time}
+                                            {msg?.time || ""}
                                         </span>
                                     </div>
                                 )}
 
                                 <ColoredText
-                                    color={
-                                        msg.user.id === user?.id
-                                            ? "GREEN"
-                                            : "DEFAULT"
-                                    }
+                                    color={msg?.color || TextColor.GRAY}
                                 >
-                                    {msg.content}
+                                    {msg?.content || ""}
                                 </ColoredText>
                             </div>
                         </div>
