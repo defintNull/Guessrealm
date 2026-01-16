@@ -117,6 +117,14 @@ const router = createBrowserRouter([
                     </AuthMiddleware>
                 )
             },
+            {
+                path: "testchat",
+                element : (
+                    <AuthMiddleware>
+                        <Testchat />
+                    </AuthMiddleware>
+                )
+            },
         ]
     }
 ]);

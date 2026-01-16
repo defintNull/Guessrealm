@@ -1,74 +1,81 @@
-import * as ort from 'onnxruntime-web';
+import * as ort from 'onnxruntime-web/webgpu';
 import type { AxiosInstance } from "axios";
-
 /**
  * CONFIGURAZIONE
  */
 const CONFIG = {
-  modelPath: 'facial_attributes_model.onnx',
-  imageFolder: 'images_224',
+  modelPath: 'model_webgpu.onnx',
+  imageFolder: 'images_256',
   attributeNames: [
-    'a man', 'a woman', 'a boy', 'a girl',
-    'a person with blond hair', 'a person with brown hair', 'a person with black hair',
-    'a person with red hair', 'a person with gray hair', 'a person with white hair',
-    'a bald person', 'a bald person', 'a person with short hair',
-    'a person with hair around his neck', 'a bald person', 'a person with straight hair',
-    'a person with curly hair', 'a person with wavy hair', 'a person with afro hair',
-    'clean shaven', 'stubble', 'beard',
-    'a person with brown eyes', 'a person with blue eyes', 'a person with green eyes',
-    'a person with hazel eyes', 'a person with black eyes', 'a person with amber eyes',
-    'a person with clean hair', 'a person with few hair', 'a woman with her head covered',
-    'a woman with visible forehead', 'a woman with a headband on her forehead',
-    'a person with a hat', 'a person with eyes', 'a person with visible eyes',
-    'a person with eye wrinkles', 'a person with eye bags', 'a person with eyeglasses'
+    'smile',
+    'gender_male',
+    'gender_female',
+    'hair_brown',
+    'hair_black',
+    'hair_blond',
+    'hair_gray',
+    'hair_long',
+    'hair_short',
+    'ethnicity_asian',
+    'ethnicity_black',
+    'ethnicity_latino',
+    'ethnicity_white',
+    'eye_blue',
+    'eye_brown',
+    'eye_green',
+    'has_facial_hair',
+    'a person with eyeglasses'
   ],
   attributeGroups: [
-    { name: 'Gender', indices: [0, 1, 2, 3] },
-    { name: 'Hair Color', indices: [4, 5, 6, 7, 8, 9, 10] },
-    { name: 'Hair Length', indices: [11, 12, 13] },
-    { name: 'Hair Type', indices: [14, 15, 16, 17, 18] },
-    { name: 'Facial Hair', indices: [19, 20, 21] },
-    { name: 'Eye Color', indices: [22, 23, 24, 25, 26, 27] },
-    { name: 'Hat', indices: [28, 29, 30, 31, 32, 33] },
-    { name: 'Eyeglasses', indices: [34, 35, 36, 37, 38] }
+    { name: 'Gender', indices: [1, 2] },
+    { name: 'Hair Color', indices: [3, 4, 5, 6] },
+    { name: 'Hair Length', indices: [7, 8] },
+    { name: 'Ethnicity', indices: [9, 10, 11, 12] },
+    { name: 'Eye Color', indices: [13, 14, 15] }
   ],
   displayMapping: {
-    0: 'Uomo', 1: 'Donna', 2: 'Uomo', 3: 'Donna',
-    4: 'Capelli biondi', 5: 'Capelli Marroni', 6: 'Capelli neri',
-    7: 'Capelli rossi', 8: 'Capelli grigi', 9: 'Capelli bianchi', 10: 'No Capelli',
-    11: 'No capelli', 12: 'Capelli corti', 13: 'Capelli lunghi',
-    14: 'No capelli', 15: 'Capelli lisci', 16: 'Capelli ricci',
-    17: 'Capelli mossi', 18: 'Capelli afro',
-    19: 'Senza Barba', 20: 'Con Barba', 21: 'Con Barba',
-    22: 'Occhi marroni', 23: 'Occhi azzurri', 24: 'Occhi verdi',
-    25: 'Occhi verdi', 26: 'Occhi marroni', 27: 'Occhi verdi',
-    28: 'Senza Cappello', 29: 'Senza Cappello', 30: 'Con Cappello',
-    31: 'Senza Cappello', 32: 'Con Cappello', 33: 'Con Cappello',
-    34: 'Senza Occhiali', 35: 'Senza Occhiali', 36: 'Senza Occhiali',
-    37: 'Senza Occhiali', 38: 'Con Occhiali'
-  }
+    0: 'Sorriso',
+    1: 'Uomo',
+    2: 'Donna',
+    3: 'Capelli Marroni',
+    4: 'Capelli Neri',
+    5: 'Capelli Biondi',
+    6: 'Capelli Grigi',
+    7: 'Capelli Lunghi',
+    8: 'Capelli Corti',
+    9: 'Asiatico',
+    10: 'Nero',
+    11: 'Latino',
+    12: 'Bianco',
+    13: 'Occhi Azzurri',
+    14: 'Occhi Marroni',
+    15: 'Occhi Verdi',
+    16: 'Con Barba',
+    17: 'Con Occhiali'
+  },
+  // Mapping domanda -> tratto -> indici attributi originali
+  questionToIndices: {
+    0: [0],              // Sorriso
+    1: [1],              // Uomo
+    2: [2],              // Donna
+    3: [3],              // Capelli Marroni
+    4: [4],              // Capelli neri
+    5: [5],              // Capelli biondi
+    6: [6],              // Capelli grigi
+    7: [7],              // Capelli lunghi
+    8: [8],              // Capelli corti
+    9: [9],              // Etnia asiatico
+    10: [10],            // Etnia africano
+    11: [11],            // Etnia latino
+    12: [12],            // Etnia caucasica
+    13: [13],            // Occhi azzurri
+    14: [14],            // Occhi marroni
+    15: [15],            // Occhi verdi
+    16: [16],            // Con Barba
+    17: [17]             // Con Occhiali
+  } as Record<number, number[]>
 };
 
-// Mapping domanda -> tratto -> indici attributi originali
-const QUESTION_TO_INDICES: Record<number, number[]> = {
-  0: [0, 2],           // Uomo
-  1: [1, 3],           // Donna
-  2: [4],              // Capelli biondi
-  3: [5],              // Capelli Marroni
-  4: [6],              // Capelli neri
-  5: [7],              // Capelli rossi
-  6: [10, 11, 14],     // No Capelli
-  7: [13],             // Capelli lunghi
-  8: [12],             // Capelli corti
-  9: [16],             // Capelli ricci
-  10: [15],            // Capelli lisci
-  11: [20, 21],        // Con Barba
-  12: [23],            // Occhi azzurri
-  13: [24, 25, 27],    // Occhi verdi
-  14: [22, 26],        // Occhi marroni
-  15: [38],            // Con Occhiali
-  16: [30, 32, 33]     // Con Cappello
-};
 
 /**
  * TIPI
@@ -88,57 +95,97 @@ export type QuestionAnswer = {
 };
 
 /**
- * CLASSE PRINCIPALE
+ * CLASSE PRINCIPALE CON SUPPORTO WEBGPU
  */
 export class FacialAttributesClassifier {
-  private static instance: FacialAttributesClassifier | null = null;
-  private session: ort.InferenceSession | null = null;
+    private static instance: FacialAttributesClassifier | null = null;
+    private session: ort.InferenceSession | null = null;
+    private executionProvider: string = '';
 
-  private constructor() {}
+    public constructor() {}
 
-  public static getInstance(): FacialAttributesClassifier {
-    if (!FacialAttributesClassifier.instance) {
-        FacialAttributesClassifier.instance = new FacialAttributesClassifier();
+    public static getInstance(): FacialAttributesClassifier {
+        if (!FacialAttributesClassifier.instance) {
+            FacialAttributesClassifier.instance = new FacialAttributesClassifier();
+        }
+        return FacialAttributesClassifier.instance;
     }
-    return FacialAttributesClassifier.instance;
-  }
 
-  public async loadModel(modelPath?: string, dataPath?: string, axios?: AxiosInstance): Promise<boolean> {
+
+  /**
+   * Carica il modello con supporto WebGPU
+   * @param useWebGpu - Se true, tenta di usare WebGPU, altrimenti usa WASM
+   * @param modelPath - Percorso personalizzato del modello (opzionale)
+   */
+  async loadModel(useWebGpu: boolean = true, modelPath?: string, axios?: AxiosInstance): Promise<void> {
     const mPath = modelPath || CONFIG.modelPath;
-    const dPath = dataPath || `${CONFIG.modelPath}.data`;
 
     try {
-      let modelResponse = null;
-      let modelBuffer = null;
-      let dataResponse = null;
-      let dataBuffer = null;
+      // Configurazione delle opzioni di sessione
+      const sessionOptions: ort.InferenceSession.SessionOptions = {
+        executionProviders: [],
+        graphOptimizationLevel: 'all',
+      };
 
-      if (axios) {
-        modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
-        dataResponse  = await axios.get(dPath,  { responseType: "arraybuffer" });
+        let modelResponse = null;
+        let modelBuffer = null;
 
-        modelBuffer = modelResponse.data;
-        dataBuffer  = dataResponse.data;
+
+        if (axios) {
+            modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
+            modelBuffer = modelResponse.data;
+        } else {
+            modelResponse = await fetch(mPath);
+            modelBuffer = await modelResponse.arrayBuffer();
+        }
+
+
+
+      // Determina quale execution provider utilizzare
+      if (useWebGpu) {
+        // Verifica supporto WebGPU
+        if ('gpu' in navigator) {
+          try {
+            const adapter = await (navigator as any).gpu.requestAdapter();
+            if (adapter) {
+              console.log('✅ WebGPU supported, attempting to use it...');
+              sessionOptions.executionProviders = ['webgpu'];
+            } else {
+              console.warn('⚠️  WebGPU not available, falling back to WASM');
+              sessionOptions.executionProviders = ['wasm'];
+            }
+          } catch (err) {
+            console.warn('⚠️  WebGPU check failed, using WASM:', err);
+            sessionOptions.executionProviders = ['wasm'];
+          }
+        } else {
+          console.warn('⚠️  WebGPU not supported by browser, using WASM');
+          sessionOptions.executionProviders = ['wasm'];
+        }
       } else {
-        modelResponse = await fetch(mPath);
-        dataResponse  = await fetch(dPath);
-
-        modelBuffer = await modelResponse.arrayBuffer();
-        dataBuffer  = await dataResponse.arrayBuffer();
+        console.log('🔄 Using WASM (CPU) as requested');
+        sessionOptions.executionProviders = ['wasm'];
       }
 
-      this.session = await ort.InferenceSession.create(modelBuffer, {
-        externalData: [{ data: dataBuffer, path: `${CONFIG.modelPath}.data` }]
-      });
+      // Crea la sessione
+      this.session = await ort.InferenceSession.create(modelBuffer, sessionOptions);
 
-      console.log('Model loaded successfully');
-      return true;
+      // Verifica quale provider è stato effettivamente utilizzato
+      this.executionProvider = (this.session as any).handler?._ep ||
+                              sessionOptions.executionProviders[0] ||
+                              'unknown';
+
+      console.log('✅ Model loaded successfully');
+      console.log(`🎮 Execution provider: ${this.executionProvider}`);
+
     } catch (error) {
       throw new Error(`Failed to load model: ${error}`);
-      return false;
     }
   }
 
+  /**
+   * Pre-processa un'immagine 256x256 per il modello
+   */
   private async preprocessImage(imageUrl: string): Promise<ort.Tensor> {
     return new Promise<ort.Tensor>((resolve, reject) => {
       const img = new Image();
@@ -147,33 +194,37 @@ export class FacialAttributesClassifier {
       img.onload = () => {
         try {
           const canvas = document.createElement('canvas');
-          canvas.width = 224;
-          canvas.height = 224;
+          canvas.width = 256;
+          canvas.height = 256;
           const ctx = canvas.getContext('2d');
 
           if (!ctx) {
-            reject(new Error('Unable to obtain 2D context'));
+            reject(new Error('Unable to obtain 2D rendering context'));
             return;
           }
 
-          ctx.drawImage(img, 0, 0, 224, 224);
-          const imageData = ctx.getImageData(0, 0, 224, 224);
+          ctx.drawImage(img, 0, 0, 256, 256);
+          const imageData = ctx.getImageData(0, 0, 256, 256);
           const data = imageData.data;
 
           const red: number[] = [], green: number[] = [], blue: number[] = [];
 
           for (let i = 0; i < data.length; i += 4) {
-            red.push((data[i] ?? 0) / 255.0);
-            green.push((data[i + 1] ?? 0) / 255.0);
-            blue.push((data[i + 2] ?? 0) / 255.0);
+            const r = data[i] ?? 0;
+            const g = data[i + 1] ?? 0;
+            const b = data[i + 2] ?? 0;
+
+            red.push(r / 255.0);
+            green.push(g / 255.0);
+            blue.push(b / 255.0);
           }
 
           const input = new Float32Array([...red, ...green, ...blue]);
-          const tensor = new ort.Tensor('float32', input, [1, 3, 224, 224]);
+          const tensor = new ort.Tensor('float32', input, [1, 3, 256, 256]);
 
           resolve(tensor);
         } catch (err) {
-          reject(err);
+          reject(err instanceof Error ? err : new Error(String(err)));
         }
       };
 
@@ -182,10 +233,13 @@ export class FacialAttributesClassifier {
     });
   }
 
+  /**
+   * Ottiene gli attributi dominanti per ogni gruppo
+   */
   private getDominantAttributes(attributes: Attribute[]): Map<string, number> {
     const dominantMap = new Map<string, number>();
 
-    // Processa i gruppi di attributi
+    // Processa i gruppi di attributi mutualmente esclusivi
     for (const group of CONFIG.attributeGroups) {
       let maxProb = -1;
       let maxAttr: Attribute | undefined = undefined;
@@ -206,6 +260,19 @@ export class FacialAttributesClassifier {
       }
     }
 
+    // Aggiungi attributi non in gruppi (smile, facial hair, eyeglasses)
+    const usedIndices = new Set<number>();
+    CONFIG.attributeGroups.forEach(g => g.indices.forEach(i => usedIndices.add(i)));
+
+    for (const attr of attributes) {
+      if (!usedIndices.has(attr.index)) {
+        const displayName = CONFIG.displayMapping[attr.index as keyof typeof CONFIG.displayMapping];
+        if (displayName) {
+          dominantMap.set(displayName, attr.probability);
+        }
+      }
+    }
+
     return dominantMap;
   }
 
@@ -213,7 +280,7 @@ export class FacialAttributesClassifier {
    * Calcola la probabilità massima per una domanda basandosi sugli indici corrispondenti
    */
   private getQuestionProbability(questionId: number, attributes: Attribute[]): number {
-    const indices = QUESTION_TO_INDICES[questionId];
+    const indices = CONFIG.questionToIndices[questionId];
     if (!indices || indices.length === 0) {
       return 0;
     }
@@ -230,29 +297,49 @@ export class FacialAttributesClassifier {
   }
 
   /**
+   * Verifica se un nome inizia con vocale
+   */
+  private startsWithVowel(name?: string): boolean {
+    if (!name) return false;
+    const firstChar = name.charAt(0).toLowerCase();
+    return ['a', 'e', 'i', 'o', 'u'].includes(firstChar);
+  }
+
+  /**
    * METODO CENTRALE: Classifica una singola immagine e restituisce array di 19 risposte
+   *
+   * @param imageSrc - URL o percorso dell'immagine da classificare
+   * @param imageName - Nome opzionale dell'immagine (usato per domande vocale/consonante)
+   * @returns Array di QuestionAnswer con 19 elementi
    */
   public async classifyImage(imageSrc: string, imageName?: string): Promise<QuestionAnswer[]> {
     if (!this.session) {
       throw new Error('Model not loaded. Call loadModel() first.');
     }
 
+    //console.log(`\n🖼️  Classifying: ${imageName || imageSrc}`);
+    //console.log('━'.repeat(60));
+
     try {
-      // Costruisci il path dell'immagine
-      const imageUrl = imageSrc;
-
       // Pre-processa l'immagine
-      const tensor = await this.preprocessImage(imageUrl);
+      //console.log('⚙️  Preprocessing image...');
+      const tensor = await this.preprocessImage(imageSrc);
 
-      // Esegui l'inferenza
+      // Esegui l'inferenza (WebGPU o WASM)
+      //console.log(`🧠 Running inference (${this.executionProvider})...`);
       const feeds: Record<string, ort.Tensor> = {};
-      const inputName = this.session.inputNames[0];
+      const inputName = this.session.inputNames && this.session.inputNames.length > 0
+        ? this.session.inputNames[0]
+        : 'input';
+
       if (inputName) {
         feeds[inputName] = tensor;
       }
 
       const output = await this.session.run(feeds);
-      const outputName = this.session.outputNames[0];
+      const outputName = this.session.outputNames && this.session.outputNames.length > 0
+        ? this.session.outputNames[0]
+        : Object.keys(output)[0];
 
       if (!outputName) {
         throw new Error('Unable to determine output name');
@@ -264,8 +351,9 @@ export class FacialAttributesClassifier {
       }
 
       const predictions = outputTensor.data as ArrayLike<number>;
+      //console.log(`📊 Received ${predictions.length} predictions`);
 
-      // Crea gli attributi
+      // Crea gli attributi con sigmoide
       const attributes: Attribute[] = [];
       for (let i = 0; i < predictions.length && i < CONFIG.attributeNames.length; i++) {
         const pred = predictions[i];
@@ -280,53 +368,45 @@ export class FacialAttributesClassifier {
         }
       }
 
-      // Ottieni i tratti dominanti (per determinare answer: true/false)
+      // Ottieni i tratti dominanti
       const dominantTraits = this.getDominantAttributes(attributes);
 
-      // Costruisci l'array di 19 risposte (0-18)
+      // Costruisci l'array di 19 risposte
       const answers: QuestionAnswer[] = [];
       const isVowel = this.startsWithVowel(imageName);
+      const numQuestions = 19;
 
-      for (let questionId = 0; questionId <= 18; questionId++) {
-        if (questionId === 17) {
-          // "Ha un nome che inizia con una vocale?"
+      for (let questionId = 0; questionId <= numQuestions; questionId++) {
+        if (questionId === (numQuestions - 1)) {
+          // Penultima domanda: "Ha un nome che inizia con una vocale?"
           answers.push({
             questionId,
             answer: isVowel,
             percentage: isVowel ? 100 : 0
           });
-        } else if (questionId === 18) {
-          // "Ha un nome che inizia con una consonante?"
+        } else if (questionId === numQuestions) {
+          // Ultima domanda: "Ha un nome che inizia con una consonante?"
           answers.push({
             questionId,
             answer: !isVowel,
             percentage: !isVowel ? 100 : 0
           });
         } else {
-          // Attributi canonici
-          // answer: true se è dominante
-          // percentage: sempre la probabilità reale (anche se non dominante)
-          const indices = QUESTION_TO_INDICES[questionId];
-          if (indices) {
+          // Attributi dal modello (questionId 0-17)
+          const indices = CONFIG.questionToIndices[questionId];
+          if (indices && indices.length > 0) {
             const probability = this.getQuestionProbability(questionId, attributes);
             const percentage = Math.round(probability * 100);
 
-            // Determina se la risposta è true controllando se corrisponde a un tratto dominante
-            const trait = Object.keys(QUESTION_TO_INDICES).find(key =>
-              parseInt(key) === questionId
-            );
+            // Determina se la risposta è true controllando i tratti dominanti
             let answer = false;
-            if (trait) {
-              // Cerca il display name corrispondente verificando gli indici
-              for (const [displayName, prob] of Array.from(dominantTraits.entries())) {
-                // Verifica se questo displayName corrisponde a questa domanda
-                const displayIndices = indices.map(idx =>
-                  CONFIG.displayMapping[idx as keyof typeof CONFIG.displayMapping]
-                );
-                if (displayIndices.includes(displayName)) {
-                  answer = true;
-                  break;
-                }
+            for (const [displayName] of Array.from(dominantTraits.entries())) {
+              const displayIndices = indices.map(idx =>
+                CONFIG.displayMapping[idx as keyof typeof CONFIG.displayMapping]
+              );
+              if (displayIndices.includes(displayName)) {
+                answer = true;
+                break;
               }
             }
 
@@ -335,21 +415,124 @@ export class FacialAttributesClassifier {
               answer,
               percentage
             });
+          } else {
+            // Attributo non presente
+            answers.push({
+              questionId,
+              answer: false,
+              percentage: 0
+            });
           }
         }
       }
+
+      // Stampa risultati su console
+      this.printResults(answers, imageName || imageSrc);
 
       return answers;
 
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`Failed to classify image ${imageSrc}: ${message}`);
+      throw new Error(`Failed to classify image: ${message}`);
     }
   }
 
-  private startsWithVowel(name?: string): boolean {
-    if (!name) return false;
-    const firstChar = name.charAt(0).toLowerCase();
-    return ['a', 'e', 'i', 'o', 'u'].includes(firstChar);
+  /**
+   * Versione alternativa che accetta imageId invece di percorso completo
+   */
+  public async classifyImageById(imageId: number, imageName?: string): Promise<QuestionAnswer[]> {
+    const paddedNumber = String(imageId).padStart(6, '0');
+    const imageUrl = `${CONFIG.imageFolder}/${paddedNumber}.png`;
+    return this.classifyImage(imageUrl, imageName);
   }
+
+  /**
+   * Stampa i risultati su console in formato leggibile
+   */
+  private printResults(answers: QuestionAnswer[], imageName: string): void {
+    //console.log(`\n📋 Results for: ${imageName}`);
+    //console.log('═'.repeat(60));
+
+    const questionLabels: Record<number, string> = {
+      0: 'Sorriso',
+      1: 'Uomo',
+      2: 'Donna',
+      3: 'Capelli Marroni',
+      4: 'Capelli Neri',
+      5: 'Capelli Biondi',
+      6: 'Capelli Grigi',
+      7: 'Capelli Lunghi',
+      8: 'Capelli Corti',
+      9: 'Asiatico',
+      10: 'Nero',
+      11: 'Latino',
+      12: 'Bianco',
+      13: 'Occhi Azzurri',
+      14: 'Occhi Marroni',
+      15: 'Occhi Verdi',
+      16: 'Con Barba',
+      17: 'Con Occhiali',
+      18: 'Nome con Vocale',
+      19: 'Nome con Consonante'
+    };
+
+    answers.forEach((qa) => {
+      const label = questionLabels[qa.questionId] || `Q${qa.questionId}`;
+      const answerStr = qa.answer ? '✓ Sì' : '✗ No';
+      const bar = '█'.repeat(Math.round(qa.percentage / 10));
+
+      //console.log(
+      //  `${String(qa.questionId).padStart(2)}. ${label.padEnd(20)} → ${answerStr.padEnd(6)} [${bar.padEnd(10)}] ${qa.percentage}%`
+      //);
+    });
+
+    //console.log('═'.repeat(60));
+  }
+
+  /**
+   * Restituisce il provider di esecuzione attualmente in uso
+   */
+  public getExecutionProvider(): string {
+    return this.executionProvider;
+  }
+}
+
+/**
+ * FUNZIONE DI UTILITÀ: Crea classificatore e classifica immagine per ID
+ */
+export async function classifyImageById(
+  imageId: number,
+  imageName?: string,
+  options?: {
+    modelPath?: string;
+    useWebGpu?: boolean;
+  }
+): Promise<QuestionAnswer[]> {
+  const classifier = new FacialAttributesClassifier();
+  await classifier.loadModel(options?.useWebGpu ?? true, options?.modelPath);
+  const answers = await classifier.classifyImageById(imageId, imageName);
+
+  //console.log(`\n✅ Classification completed using: ${classifier.getExecutionProvider()}\n`);
+
+  return answers;
+}
+
+/**
+ * FUNZIONE DI UTILITÀ: Crea classificatore e classifica immagine per percorso
+ */
+export async function classifyImage(
+  imageSrc: string,
+  imageName?: string,
+  options?: {
+    modelPath?: string;
+    useWebGpu?: boolean;
+  }
+): Promise<QuestionAnswer[]> {
+  const classifier = new FacialAttributesClassifier();
+  await classifier.loadModel(options?.useWebGpu ?? true, options?.modelPath);
+  const answers = await classifier.classifyImage(imageSrc, imageName);
+
+  //console.log(`\n✅ Classification completed using: ${classifier.getExecutionProvider()}\n`);
+
+  return answers;
 }

@@ -125,7 +125,7 @@ export default function Singleplayer() {
     const [ mode, setMode ] = useState(0);
 
     useEffect(() => {
-        console.log(botPhotoSelected);
+        //console.log(botPhotoSelected);
     }, [botPhotoSelected])
 
     // Preprocessing
@@ -174,29 +174,33 @@ export default function Singleplayer() {
             (async () => {
                 let aiModel = FacialAttributesClassifier.getInstance();
                 await aiModel.loadModel(
+                    true,//CAMBIARE QUI PER ABILITARE WEBGPU
                     "spa/ai/aimodel",
-                    "spa/ai/aidatamodel",
                     axios
                 )
-                photosArray = photosArray.map(async photo => {
-                    let aiRes = await aiModel.classifyImage(photo.path, photo?.data?.name, {
+                for (let i = 0; i < photosArray.length; i++) {
+                    const photo = photosArray[i];
+
+                    const aiRes = await aiModel.classifyImage(photo.path, photo?.data?.name, {
                         axios: axios,
-                        modelPath: "spa/ai/aimodel",
-                        dataPath: "spa/ai/aidatamodel"
+                        modelPath: "spa/ai/aimodel"
                     });
-                    let questionsArray = aiRes.map(ai => {
+
+                    const questionsArray = aiRes.map(ai => {
                         const { questionId, answer, percentage } = ai;
                         return {
                             id: questionId,
                             response: answer,
                             affidability: Number((percentage / 100).toFixed(2))
-                        }
+                        };
                     });
-                    return {
+
+                    photosArray[i] = {
                         ...photo,
                         questions: questionsArray
-                    }
-                });
+                    };
+                }
+
                 photosArray = await Promise.all(photosArray);
                 botPhotosArray = photosArray.map(p => ({ ...p }));
                 setPhotos(photosArray);
