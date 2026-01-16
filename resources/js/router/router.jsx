@@ -18,6 +18,7 @@ import { LobbyMiddleware } from "./middlewares/LobbyMiddleware";
 import { MultiplayerGameProvider } from "@/context/MultiplayerGameProvider";
 import { MultiplayerGameMiddleware } from "./middlewares/MultiplayerGameMiddleware";
 import MultiplayerGame from "@/pages/MultiplayerGame";
+import Testchat from "@/pages/testChat";
 
 
 const router = createBrowserRouter([
