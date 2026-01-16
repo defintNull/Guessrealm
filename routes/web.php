@@ -21,6 +21,13 @@ Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
     ->name('check_email');
 
 
+Route::get('/chats/{chatId}', [ChatController::class, 'index'])
+    ->name('chats.index');
+
+Route::post('/chats/{chatId?}', [ChatController::class, 'store'])
+    ->name('chats.store');
+
+
 Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(function () {
     Route::middleware('guest')->group(function () {
         Route::post("/login", [AuthController::class, 'login'])
@@ -32,7 +39,7 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->name('register');
     });
 
-    Route::middleware('auth')->group(function () {
+    Route::middleware('auth:sanctum')->group(function () {
         Route::get("/me", [AuthController::class, 'me'])
             ->name('me');
 
@@ -69,9 +76,15 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
                 ->name('getDataModel');
         });
 
-        Route::name('lobby.')->prefix('lobby')->group(function() {
+        Route::name('lobby.')->prefix('lobby')->group(function () {
             Route::get('index', [LobbyController::class, 'index'])
                 ->name('index');
+
+            Route::get('show', [LobbyController::class, 'show'])
+                ->name('show');
+
+            Route::get('timer', [LobbyController::class, 'timer'])
+                ->name('timer');
 
             Route::post('createlobby', [LobbyController::class, 'createLobby'])
                 ->name('createLobby');
