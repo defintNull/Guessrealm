@@ -16,3 +16,28 @@ Broadcast::channel('lobby.{id}', function ($user, $id) {
         FakeRedis::hget("lobby:$id:player1", "id") == $user->id ||
         FakeRedis::hget("lobby:$id:player2", "id") == $user->id;
 });
+
+Broadcast::channel('game.{id}.player.{player_id}', function ($user, $id, $player_id) {
+    if (!FakeRedis::exists("game:$id")) {
+        return false;
+    }
+
+    return
+        $user->id == $player_id &&
+        (
+            FakeRedis::hget("game:$id:player1", "id") == $player_id ||
+            FakeRedis::hget("game:$id:player2", "id") == $player_id
+        );
+});
+
+Broadcast::channel('game.{id}.chat', function ($user, $id) {
+    if (!FakeRedis::exists("game:$id")) {
+        return false;
+    }
+
+    return
+        (
+            FakeRedis::hget("game:$id:player1", "id") == $user->id ||
+            FakeRedis::hget("game:$id:player2", "id") == $user->id
+        );
+});

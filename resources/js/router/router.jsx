@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Outlet } from "react-router-dom";
 import DefaultLayout from "../layouts/DefaultLayout";
 
 import Home from "@/pages/Home";
@@ -15,7 +15,10 @@ import JoinLobby from "@/pages/JoinLobby";
 import Lobby from "@/pages/Lobby";
 import { LobbyProvider } from "@/context/LobbyProvider";
 import { LobbyMiddleware } from "./middlewares/LobbyMiddleware";
-import Testchat from "@/pages/Testchat";
+import { MultiplayerGameProvider } from "@/context/MultiplayerGameProvider";
+import { MultiplayerGameMiddleware } from "./middlewares/MultiplayerGameMiddleware";
+import MultiplayerGame from "@/pages/MultiplayerGame";
+import Testchat from "@/pages/testChat";
 
 
 const router = createBrowserRouter([
@@ -37,91 +40,94 @@ const router = createBrowserRouter([
             },
             {
                 path: "multiplayer",
+                element: (
+                    <AuthMiddleware>
+                        <LobbyProvider>
+                            <MultiplayerGameProvider>
+                                <Outlet />
+                            </MultiplayerGameProvider>
+                        </LobbyProvider>
+                    </AuthMiddleware>
+                ),
                 children: [
                     {
                         index: true,
                         element: (
-                            <AuthMiddleware>
-                                <Multiplayer />
-                            </AuthMiddleware>
+                            <Multiplayer />
                         ),
                     },
                     {
                         path: "createlobby",
                         element: (
-                            <AuthMiddleware>
-                                <LobbyProvider>
-                                    <CreateLobby />
-                                </LobbyProvider>
-                            </AuthMiddleware>
+                            <CreateLobby />
                         )
                     },
                     {
                         path: "joinlobby",
                         element: (
-                            <AuthMiddleware>
-                                <LobbyProvider>
-                                    <JoinLobby />
-                                </LobbyProvider>
-                            </AuthMiddleware>
+                            <JoinLobby />
                         )
                     },
                     {
                         path: "lobby",
                         element: (
-                            <AuthMiddleware>
-                                <LobbyProvider>
-                                    <LobbyMiddleware>
-                                        <Lobby />
-                                    </LobbyMiddleware>
-                                </LobbyProvider>
-                            </AuthMiddleware>
+                            <LobbyMiddleware>
+                                <Lobby />
+                            </LobbyMiddleware>
+                        )
+                    },
+                    {
+                        path: "game",
+                        element: (
+                            <MultiplayerGameMiddleware>
+                                <MultiplayerGame />
+                            </MultiplayerGameMiddleware>
                         )
                     },
                 ]
-            }
+            },
+            {
+                path: "login",
+                element: (
+                    <GuestMiddleware>
+                        <Login />
+                    </GuestMiddleware>
+                )
+            },
+            {
+                path: "register",
+                element: (
+                    <GuestMiddleware>
+                        <Register />
+                    </GuestMiddleware>
+                )
+            },
+            {
+                path: "profile",
+                element : (
+                    <AuthMiddleware>
+                        <Profile />
+                    </AuthMiddleware>
+                )
+            },
+            {
+                path: "password",
+                element : (
+                    <AuthMiddleware>
+                        <Password />
+                    </AuthMiddleware>
+                )
+            },
+            {
+                path: "testchat",
+                element : (
+                    <AuthMiddleware>
+                        <Testchat />
+                    </AuthMiddleware>
+                )
+            },
         ]
-    },
-    {
-        path: "login",
-        element: (
-            <GuestMiddleware>
-                <Login />
-            </GuestMiddleware>
-        )
-    },
-    {
-        path: "register",
-        element: (
-            <GuestMiddleware>
-                <Register />
-            </GuestMiddleware>
-        )
-    },
-    {
-        path: "profile",
-        element : (
-            <AuthMiddleware>
-                <Profile />
-            </AuthMiddleware>
-        )
-    },
-    {
-        path: "password",
-        element : (
-            <AuthMiddleware>
-                <Password />
-            </AuthMiddleware>
-        )
-    },
-    {
-        path: "testchat",
-        element : (
-            <AuthMiddleware>
-                <Testchat />
-            </AuthMiddleware>
-        )
-    },
+    }
 ]);
 
 export default router;

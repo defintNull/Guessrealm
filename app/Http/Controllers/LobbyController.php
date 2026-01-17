@@ -21,8 +21,8 @@ class LobbyController extends Controller
      *     name: "prova"
      *     code: 21321564
      *     visibility: 0
-     *     time = 1700000000
-     *     status = waiting
+     *     aihelp = true
+     *     timeout = 120
      * lobby:1:player1
      *     id = 123
      *     status = true
@@ -166,9 +166,9 @@ class LobbyController extends Controller
 
     public function createLobby(Request $request) : JsonResponse {
         $request->validate([
-            "lobby_visibility" => ['integer', "in:0,1"],
-            "ai_help" => ['integer', "in:0,1"],
-            "timeout" => ['integer', "in:0.5,1,2,3,5"],
+            "lobby_visibility" => ['required' ,'integer', "in:0,1"],
+            "ai_help" => ['required', 'boolean'],
+            "timeout" => ['required', 'integer', "in:0.5,1,2,3,5"],
         ]);
 
         $id = 0;
@@ -187,8 +187,8 @@ class LobbyController extends Controller
             FakeRedis::hset("lobby:$id", "name", $name);
             FakeRedis::hset("lobby:$id", "code", $code);
             FakeRedis::hset("lobby:$id", "visibility", $request->lobby_visibility);
-            FakeRedis::hset("lobby:$id", "time", time());
-            FakeRedis::hset("lobby:$id", "status", false);
+            FakeRedis::hset("lobby:$id", "aihelp", $request->ai_help ? 1 : 0);
+            FakeRedis::hset("lobby:$id", "timeout", 60*$request->timeout);
             FakeRedis::sadd("lobbies", $id);
 
             // Creating player1 user

@@ -7,6 +7,7 @@ use App\Http\Controllers\PhotoController;
 use App\Http\Middleware\SPAMiddleware;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\MultiplayerGameController;
 
 Route::get('/', function () {
     return view('App');
@@ -20,12 +21,19 @@ Route::get('/checkUsername/{username}', [AuthController::class, 'checkUsername']
 Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
     ->name('check_email');
 
-
-Route::get('/chats/{chatId}', [ChatController::class, 'index'])
+Route::get('/chats', [ChatController::class, 'index'])
     ->name('chats.index');
 
-Route::post('/chats/{chatId?}', [ChatController::class, 'store'])
+Route::get('/chats/{chat}', [ChatController::class, 'show'])
+    ->name('chats.show');
+
+Route::post('/chats/{chat}', [ChatController::class, 'store'])
     ->name('chats.store');
+
+// 4. SEARCH: Cerca messaggi dentro una chat
+Route::get('/chats/{chat}/search', [ChatController::class, 'search'])
+    ->name('chats.search');
+
 
 
 Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(function () {
@@ -101,8 +109,47 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             Route::post('setready', [LobbyController::class, 'setReady'])
                 ->name('setReady');
         });
+
+        Route::name('multiplayer.')->prefix('multiplayer')->group(function () {
+            Route::post('start', [MultiplayerGameController::class, 'startGame'])
+                ->name('start');
+
+            Route::post('endloading', [MultiplayerGameController::class, 'endLoading'])
+                ->name('endloading');
+
+            Route::post('choosecharacter', [MultiplayerGameController::class, 'chooseCharacter'])
+                ->name('choosecharacter');
+
+            Route::post('choosequestion', [MultiplayerGameController::class, 'chooseQuestion'])
+                ->name('choosequestion');
+
+            Route::post('response', [MultiplayerGameController::class, 'response'])
+                ->name('response');
+
+            Route::post('endclosure', [MultiplayerGameController::class, 'endClosure'])
+                ->name('endclosure');
+
+            Route::post('skip', [MultiplayerGameController::class, 'skip'])
+                ->name('skip');
+
+            Route::post('guess', [MultiplayerGameController::class, 'guess'])
+                ->name('guess');
+
+            Route::post('guesscharacter', [MultiplayerGameController::class, 'guessCharacter'])
+                ->name('guesscharacter');
+
+            Route::post('guessresponse', [MultiplayerGameController::class, 'guessResponse'])
+                ->name('guessresponse');
+
+            Route::post('endtimer', [MultiplayerGameController::class, 'endTimer'])
+                ->name('endtimer');
+        });
     });
 });
+
+Route::post('/spa/exit', [MultiplayerGameController::class, 'exit'])
+    ->middleware('auth')
+    ->name('exit');
 
 Route::get('/{any}', function () {
     return view('App');

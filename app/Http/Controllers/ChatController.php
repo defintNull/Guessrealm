@@ -2,70 +2,88 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Message;
 use App\Models\Chat;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use App\Http\Resources\MessageResource;
+use App\Http\Resources\ChatResource;
+use Illuminate\Support\Str; // Nota la 'I' maiuscola
 
 class ChatController extends Controller
 {
-    //
+    /**
+     * 1. INDEX: Restituisce la LISTA delle chat (Sidebar sinistra)
+     * Rotta: GET /api/chats
+     */
+    public function index(Request $request)
+    {
+        $user = $request->user();
 
-    public function index($chatId){
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
+        $chats = $user->chats()
+            ->with(['users', 'latestMessage']) // Eager Loading fondamentale
+            ->get()
+            ->sortByDesc('latestMessage.created_at'); // Ordina per messaggio più recente
 
-        $chat = Chat::find($chatId);
-        if (!$chat) {
-            return response()->json(['message' => 'Chat not found'], 404);
-        }
-
-        // Check if the user belongs to the chat (many-to-many)
-        $belongs = $chat->users()->where('users.id', $user->id)->exists();
-        if (!$belongs) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
-        $messages = $chat->messages()->with('user')->orderBy('created_at')->get();
-        return response()->json($messages);
+        // Usiamo la Resource che contiene la logica di formattazione (nome, avatar, ecc.)
+        // In questo modo eliminiamo la funzione 'list' che avevi scritto manualmente
+        return ChatResource::collection($chats);
     }
 
-    public function store(Request $request, $chatId = null)
+    /**
+     * 2. SHOW: Restituisce i MESSAGGI di una singola chat (Area destra)
+     * Rotta: GET /api/chats/{chat}
+     */
+    public function show(Chat $chat)
     {
-        $user = Auth::user();
-        if (!$user) {
-            return response()->json(['message' => 'Unauthenticated'], 401);
-        }
+        // Importante: controlla se l'utente può vedere questa chat
+        Gate::authorize('view', $chat);
 
-        $data = $request->validate([
-            'content' => 'required|string|max:2000',
-            'chat_id' => 'nullable|integer|exists:chats,id',
-        ]);
+        // Recupera i messaggi
+        $messages = $chat->messages()
+            ->with('user')
+            ->oldest() // Ordine cronologico (dal più vecchio al più nuovo)
+            ->get();
 
-        $targetChatId = $data['chat_id'] ?? $chatId;
-        if (!$targetChatId) {
-            return response()->json(['message' => 'chat_id is required'], 422);
-        }
+        return MessageResource::collection($messages);
+    }
 
-        $chat = Chat::find($targetChatId);
-        if (!$chat) {
-            return response()->json(['message' => 'Chat not found'], 404);
-        }
+    /**
+     * 3. STORE: Invia un nuovo messaggio
+     * Rotta: POST /api/chats/{chat}/messages (o simile)
+     */
+    public function store(Request $request, Chat $chat)
+    {
+        Gate::authorize('view', $chat); // Usa la policy 'view' o una specifica 'createMessage'
 
-        // Check membership
-        $belongs = $chat->users()->where('users.id', $user->id)->exists();
-        if (!$belongs) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
+        $data = $request->validate(['content' => 'required|string|max:2000']);
 
-        $message = Message::create([
-            'chat_id' => $chat->id,
-            'user_id' => $user->id,
+        $message = $chat->messages()->create([
+            'user_id' => auth()->id(),
             'content' => $data['content'],
         ]);
 
-        return response()->json($message->load('user'), 201);
+        return new MessageResource($message->load('user'));
+    }
+
+    /**
+     * 4. SEARCH: Cerca dentro una chat
+     * Rotta: GET /api/chats/{chat}/search
+     */
+    public function search(Request $request, Chat $chat)
+    {
+        Gate::authorize('view', $chat);
+
+        $query = $request->input('q');
+
+        if (!$query) return response()->json([]);
+
+        $searchToken = hash_hmac('sha256', Str::lower($query), config('app.key'));
+
+        $messages = $chat->messages()
+            ->whereJsonContains('search_tokens', $searchToken)
+            ->with('user')
+            ->get();
+
+        return MessageResource::collection($messages);
     }
 }

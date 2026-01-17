@@ -3,7 +3,7 @@ import axios from "axios";
 
 const LobbyContext = createContext();
 
-export function LobbyProvider({ children, storageKey = "vite-ui-theme" }) {
+export function LobbyProvider({ children }) {
     const [enableLobby, setEnableLobby] = useState(false);
 
     return (
