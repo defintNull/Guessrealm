@@ -85,9 +85,14 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
         Route::name('game.')->prefix('game')->group(function () {
             Route::post('photos', [PhotoController::class, 'index'])
                 ->name('photos');
+
             Route::get('photo/show/{id}', [PhotoController::class, 'show'])
                 ->withoutMiddleware([SPAMiddleware::class])
                 ->name('photo.show');
+
+            Route::get('bgmusic', [MultiplayerGameController::class, 'getBgMusic'])
+                ->withoutMiddleware([SPAMiddleware::class])
+                ->name('bgmusic');
         });
 
         Route::name('ai.')->prefix('ai')->group(function () {

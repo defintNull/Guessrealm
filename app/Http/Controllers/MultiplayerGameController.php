@@ -10,6 +10,7 @@ use App\Services\FakeRedis;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class MultiplayerGameController extends Controller
@@ -521,5 +522,11 @@ class MultiplayerGameController extends Controller
         }
 
         return response()->json();
+    }
+
+    public function getBgMusic() {
+        return response()->file(
+                Storage::disk('local')->path('Audios/bgmusic.mp3')
+            );
     }
 }

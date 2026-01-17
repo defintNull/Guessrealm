@@ -1,4 +1,6 @@
 *
 !Models/
 !Models/**
+!Audios/
+!Audios/**
 !.gitignore

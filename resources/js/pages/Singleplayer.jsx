@@ -970,6 +970,7 @@ export default function Singleplayer() {
                         </div>
                     </DialogContent>
                 </Dialog>
+                <audio src="/spa/game/bgmusic" autoPlay loop ref={el => el && (el.volume = 0.4)}/>
             </div>
         </div>
     );
