@@ -51,6 +51,10 @@ export default function MultiplayerGame() {
     const [ aiEnabled, setAiEnabled ] = useState(state.ai_help);
     const [ aiHelp, setAiHelp ] = useState(true);
 
+    // Settings
+    const [ enableBgMusic, setEnableBgMusic ] = useState(true);
+    const audioRef = useRef(null);
+
     // Game states
     const gameId = state.game_id;
     const [ gameState, setGameState ] = useState(1);
@@ -248,6 +252,17 @@ export default function MultiplayerGame() {
             ]);
         });
     }, []);
+
+    // Audio effect
+    useEffect(() => {
+        if (!audioRef.current) return;
+        audioRef.current.volume = 0.4;
+        if (enableBgMusic) {
+            audioRef.current.play().catch(() => {});
+        } else {
+            audioRef.current.pause();
+        }
+    }, [enableBgMusic]);
 
     // Game Logic FSM
     function game() {
@@ -919,6 +934,30 @@ export default function MultiplayerGame() {
                                     </SelectContent>
                                 </Select>
                             </Field>
+                            <Field orientation="horizontal">
+                                    <FieldLabel>Audio</FieldLabel>
+                                    <Select
+                                        value={Number(enableBgMusic)}
+                                        onValueChange={setEnableBgMusic}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a value..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                <SelectLabel>
+                                                    Audio
+                                                </SelectLabel>
+                                                <SelectItem value={1}>
+                                                    On
+                                                </SelectItem>
+                                                <SelectItem value={0}>
+                                                    Off
+                                                </SelectItem>
+                                            </SelectGroup>
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
                         </FieldGroup>
                     </DialogContent>
                 </Dialog>
@@ -1122,7 +1161,7 @@ export default function MultiplayerGame() {
                     </div>
                 </DialogContent>
             </Dialog>
-            <audio src="/spa/game/bgmusic" autoPlay loop ref={el => el && (el.volume = 0.4)}/>
+            <audio src="/spa/game/bgmusic" loop ref={audioRef} />
         </div>
     </div>
 }

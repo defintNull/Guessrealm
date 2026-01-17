@@ -101,6 +101,8 @@ export default function Singleplayer() {
     const [aiHelp, setAiHelp] = useState(1);
     const [aiLoading, setAiLoading] = useState(true);
     const aiLoadingRef = useRef(aiLoading);
+    const [ enableBgMusic, setEnableBgMusic ] = useState(true);
+    const audioRef = useRef(null);
 
     useEffect(() => {
         aiLoadingRef.current = aiLoading;
@@ -232,6 +234,17 @@ export default function Singleplayer() {
         return () =>
             document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    // Audio effect
+    useEffect(() => {
+        if (!audioRef.current) return;
+        audioRef.current.volume = 0.4;
+        if (enableBgMusic) {
+            audioRef.current.play().catch(() => {});
+        } else {
+            audioRef.current.pause();
+        }
+    }, [enableBgMusic]);
 
     // Timer
     useEffect(() => {
@@ -819,6 +832,30 @@ export default function Singleplayer() {
                                         </SelectContent>
                                     </Select>
                                 </Field>
+                                <Field orientation="horizontal">
+                                    <FieldLabel>Audio</FieldLabel>
+                                    <Select
+                                        value={Number(enableBgMusic)}
+                                        onValueChange={setEnableBgMusic}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select a value..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                <SelectLabel>
+                                                    Audio
+                                                </SelectLabel>
+                                                <SelectItem value={1}>
+                                                    On
+                                                </SelectItem>
+                                                <SelectItem value={0}>
+                                                    Off
+                                                </SelectItem>
+                                            </SelectGroup>
+                                        </SelectContent>
+                                    </Select>
+                                </Field>
                             </FieldGroup>
                         </DialogContent>
                     </Dialog>
@@ -970,7 +1007,7 @@ export default function Singleplayer() {
                         </div>
                     </DialogContent>
                 </Dialog>
-                <audio src="/spa/game/bgmusic" autoPlay loop ref={el => el && (el.volume = 0.4)}/>
+                <audio src="/spa/game/bgmusic" loop ref={audioRef} />
             </div>
         </div>
     );
