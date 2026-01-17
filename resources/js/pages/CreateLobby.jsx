@@ -11,7 +11,7 @@ export default function CreateLobby() {
     const navigate = useNavigate();
     const { setEnableLobby } = useEnableLobby();
     const [ visibility, setVisibility ] = useState(0);
-    const [ aiHelp, setAiHelp ] = useState(0);
+    const [ aiHelp, setAiHelp ] = useState(false);
     const [ timeout, setTimeout ] = useState(1);
 
     function formSubmit(event) {
@@ -60,10 +60,14 @@ export default function CreateLobby() {
                             <FieldLabel>Ai Help</FieldLabel>
                             <FieldDescription>Choose if enable ai help during the game.</FieldDescription>
                         </FieldContent>
-                        <Select value={String(aiHelp)} onValueChange={(v) => {setAiHelp(Number(v))}}>
+                        <Select
+                            value={aiHelp ? "1" : "0"}
+                            onValueChange={(v) => setAiHelp(v === "1")}
+                        >
                             <SelectTrigger>
                                 <SelectValue placeholder="Ai Help" />
                             </SelectTrigger>
+
                             <SelectContent>
                                 <SelectItem value="0">Off</SelectItem>
                                 <SelectItem value="1">On</SelectItem>

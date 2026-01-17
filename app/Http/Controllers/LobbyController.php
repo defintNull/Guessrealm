@@ -166,9 +166,9 @@ class LobbyController extends Controller
 
     public function createLobby(Request $request) : JsonResponse {
         $request->validate([
-            "lobby_visibility" => ['integer', "in:0,1"],
-            "ai_help" => ['integer', "in:0,1"],
-            "timeout" => ['integer', "in:0.5,1,2,3,5"],
+            "lobby_visibility" => ['required' ,'integer', "in:0,1"],
+            "ai_help" => ['required', 'boolean'],
+            "timeout" => ['required', 'integer', "in:0.5,1,2,3,5"],
         ]);
 
         $id = 0;
@@ -187,7 +187,7 @@ class LobbyController extends Controller
             FakeRedis::hset("lobby:$id", "name", $name);
             FakeRedis::hset("lobby:$id", "code", $code);
             FakeRedis::hset("lobby:$id", "visibility", $request->lobby_visibility);
-            FakeRedis::hset("lobby:$id", "aihelp", $request->ai_help);
+            FakeRedis::hset("lobby:$id", "aihelp", $request->ai_help ? 1 : 0);
             FakeRedis::hset("lobby:$id", "timeout", 60*$request->timeout);
             FakeRedis::sadd("lobbies", $id);
 

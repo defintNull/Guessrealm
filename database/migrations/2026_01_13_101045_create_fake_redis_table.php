@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('fake_redis', function (Blueprint $table) {
             $table->id();
             $table->string('key')->unique();
-            $table->string('value');
+            $table->text('value');
             $table->dateTime('expire_at')->nullable();
             $table->timestamps();
         });

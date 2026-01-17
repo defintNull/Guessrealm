@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import Timer from "@/components/Timer";
 import { useEnableMultiplayerGame } from "@/context/MultiplayerGameProvider";
+import useExitGamePage from "@/hooks/useExitGamePage";
 
 export default function Lobby() {
     const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function Lobby() {
     const [ lobbyID, setLobbyID ] = useState(state.lobby_id);
     const [ lobbyName, setLobbyName ] = useState(null);
     const [ lobbyCode, setLobbyCode ] = useState(null);
+    const [ lobbyVisibility, setLobbyVisibility ] = useState(null);
     const [ players, setPlayers ] = useState(null);
     const [ lobbyMode, setLobbyMode ] = useState(state.lobby_type); // 0 Owner 1 Guest
     const [ timer, setTimer] = useState(5*60);
@@ -27,6 +29,15 @@ export default function Lobby() {
     const [ buttonToggle, setButtonToggle ] = useState(false);
 
     const [ dialogLobbyState, setDialogLobbyState ] = useState(false);
+
+    // Exit hook
+    useExitGamePage({
+        type: 'lobby',
+        id: lobbyID,
+        cleanup: () => {
+            setEnableLobby(false);
+        }
+    });
 
     useEffect(() => {
         axios.get('/spa/lobby/show', {
@@ -36,6 +47,7 @@ export default function Lobby() {
         }).then((res) => {
             setLobbyName(res.data.lobby.name);
             setLobbyCode(res.data.lobby.code);
+            setLobbyVisibility(!res.data.lobby.visibility);
             setPlayers(res.data.lobby.players);
         });
     }, []);
@@ -112,7 +124,14 @@ export default function Lobby() {
                         state: {
                             ai_help: e.aihelp,
                             timeout: e.timeout,
-                            game_websocket: e.game_websocket
+                            game_id: e.game_id,
+                            game_websocket: e.game_websocket,
+                            chat_websocket: e.chat_websocket,
+                            enemy: {
+                                id: e.enemy.id,
+                                username: e.enemy.username,
+                                avatar: e.enemy.avatar,
+                            }
                         }
                     });
                 }
@@ -132,7 +151,14 @@ export default function Lobby() {
                         state: {
                             ai_help: res.data.aihelp,
                             timeout: res.data.timeout,
-                            game_websocket: res.data.game_websocket
+                            game_id: res.data.game_id,
+                            game_websocket: res.data.game_websocket,
+                            chat_websocket: res.data.chat_websocket,
+                            enemy: {
+                                id: res.data.enemy.id,
+                                username: res.data.enemy.username,
+                                avatar: res.data.enemy.avatar,
+                            }
                         }
                     });
                 });
@@ -190,10 +216,10 @@ export default function Lobby() {
                             <span>Lobby name:</span>
                             <span>{ lobbyName }</span>
                         </p>
-                        <p className="flex flex-row w-4/5 justify-between font-semibold text-xl">
+                        {lobbyVisibility && (<p className="flex flex-row w-4/5 justify-between font-semibold text-xl">
                             <span>Lobby code:</span>
                             <span>{ lobbyCode }</span>
-                        </p>
+                        </p>)}
                     </div>
                     <Card className="w-full">
                         <CardHeader>

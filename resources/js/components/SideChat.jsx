@@ -10,11 +10,8 @@ import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 export default function SideChat({
-    chatId,
     messages,
     setMessages,
-    isSending,
-    setIsSending,
     ...props
 }) {
     const { user } = useAuth();
@@ -23,10 +20,9 @@ export default function SideChat({
 
     const sendMessage = async () => {
         const trimmedValue = inputValue.trim();
-        if (!trimmedValue || isSending) return;
+        if (!trimmedValue) return;
 
-        setIsSending(true);
-        setInputValue(""); // Puliamo subito l'input per dare feedback all'utente
+        setInputValue("");
 
         setMessages((prev) => [
             ...prev,

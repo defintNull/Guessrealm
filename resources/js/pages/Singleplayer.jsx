@@ -118,14 +118,11 @@ export default function Singleplayer() {
 
     // Question Dialog state
     const [askQuestionDialogState, setAskQuestionDialogState] = useState(false);
-    const [contentAskQuestionDialog, setContentAskQuestionDialog] =
-        useState("");
+    const [contentAskQuestionDialog, setContentAskQuestionDialog] = useState("");
 
     // Question Dialog state
-    const [responseQuestionDialogState, setResponseQuestionDialogState] =
-        useState(false);
-    const [contentResponseQuestionDialog, setContentResponseQuestionDialog] =
-        useState("");
+    const [responseQuestionDialogState, setResponseQuestionDialogState] = useState(false);
+    const [contentResponseQuestionDialog, setContentResponseQuestionDialog] = useState("");
 
     // Command selector
     const commandRef = useRef(null);
@@ -185,7 +182,7 @@ export default function Singleplayer() {
                 let aiModel = FacialAttributesClassifier.getInstance();
                 await aiModel.loadModel(
                     true, //CAMBIARE QUI PER ABILITARE WEBGPU
-                    "spa/ai/aimodel",
+                    "/spa/ai/aimodel",
                     axios
                 );
                 for (let i = 0; i < photosArray.length; i++) {
@@ -196,7 +193,7 @@ export default function Singleplayer() {
                         photo?.data?.name,
                         {
                             axios: axios,
-                            modelPath: "spa/ai/aimodel",
+                            modelPath: "/spa/ai/aimodel",
                         }
                     );
 
@@ -478,10 +475,10 @@ export default function Singleplayer() {
             {
                 id: prev.length ? prev[prev.length - 1].id + 1 : 1,
                 color: TextColor.GREEN,
-                content: response,
+                content: "Response: " + response,
                 user: {
                     id: user.id,
-                    username: "Response: " + user.username,
+                    username: user.username,
                     avatar: user.profile_picture_url,
                 },
                 time: new Date().toLocaleTimeString([], {
