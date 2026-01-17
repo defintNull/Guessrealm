@@ -374,23 +374,23 @@ export default function Singleplayer() {
                 );
                 setResponse(res);
 
-        setMessages((prev) => [
-            ...prev,
-            {
-                id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-                color: TextColor.RED,
-                content: 'Response: "' + res + '"',
-                user: {
-                    id: -1,
-                    username: "BOT",
-                    avatar: null,
-                },
-                time: new Date().toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                }),
-            },
-        ]);
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                        color: TextColor.RED,
+                        content: 'Response: "' + res + '"',
+                        user: {
+                            id: -1,
+                            username: "BOT",
+                            avatar: null,
+                        },
+                        time: new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        }),
+                    },
+                ]);
 
                 setAwaitResponse(false);
             })();
@@ -443,24 +443,23 @@ export default function Singleplayer() {
                 setCurrentQuestion(res);
                 setContentResponseQuestionDialog(res?.text);
 
-        setMessages((prev) => [
-            ...prev,
-            {
-                id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-                color: TextColor.RED,
-                content: 'Asking: "' + res?.text + '"',
-                user: {
-                    id: -1,
-                    username: "BOT",
-                    avatar: null,
-                },
-                time: new Date().toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                }),
-            },
-        ]);
-
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                        color: TextColor.RED,
+                        content: 'Asking: "' + res?.text + '"',
+                        user: {
+                            id: -1,
+                            username: "BOT",
+                            avatar: null,
+                        },
+                        time: new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        }),
+                    },
+                ]);
 
                 setAwaitResponse(false);
             })();
@@ -470,25 +469,23 @@ export default function Singleplayer() {
             setEnableForward(false);
 
             // Codice per gestire risposta del giocatore
-        setMessages((prev) => [
-            ...prev,
-            {
-                id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-                color: TextColor.GREEN,
-                content: "Response: " + response,
-                user: {
-                    id: user.id,
-                    username: user.username,
-                    avatar: user.profile_picture_url,
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                    color: TextColor.GREEN,
+                    content: "Response: " + response,
+                    user: {
+                        id: user.id,
+                        username: user.username,
+                        avatar: user.profile_picture_url,
+                    },
+                    time: new Date().toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                    }),
                 },
-                time: new Date().toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                }),
-            },
-        ]);
-
-
+            ]);
 
             (async () => {
                 let res = await botRegisterResponse(
@@ -791,7 +788,18 @@ export default function Singleplayer() {
                                     <FieldLabel>AI Help</FieldLabel>
                                     <Select
                                         value={aiHelp}
-                                        onValueChange={setAiHelp}
+                                        onValueChange={(v) => {
+                                            if(!v) {
+                                                // Reset ai close suggestion
+                                                setPhotos(prev =>
+                                                    prev.map(photo => ({
+                                                        ...photo,
+                                                        help: false
+                                                    }))
+                                                );
+                                            }
+                                            setAiHelp(v);
+                                        }}
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Select a value..." />
@@ -818,6 +826,7 @@ export default function Singleplayer() {
                         <div className="flex-1 overflow-hidden">
                             <Photo
                                 src={photoSelected?.path}
+                                name={photoSelected?.name || ""}
                                 className="h-full"
                             />
                         </div>

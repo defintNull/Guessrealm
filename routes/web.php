@@ -114,6 +114,9 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             Route::post('start', [MultiplayerGameController::class, 'startGame'])
                 ->name('start');
 
+            Route::post('photos', [MultiplayerGameController::class, 'getPhotos'])
+                ->name('photos');
+
             Route::post('endloading', [MultiplayerGameController::class, 'endLoading'])
                 ->name('endloading');
 

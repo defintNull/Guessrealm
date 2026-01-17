@@ -11,7 +11,7 @@ import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Timer from "@/components/Timer";
 import { FaStar } from "react-icons/fa";
-import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogOverlay, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { IoIosSettings } from "react-icons/io";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -113,7 +113,9 @@ export default function MultiplayerGame() {
         setEnableLobby(false);
         // Foto loading
         (async () => {
-            let res = await axios.post("/spa/game/photos");
+            let res = await axios.post("/spa/multiplayer/photos", {
+                id: gameId
+            });
 
             // Set questions
             let questionsArray = Questions().map((el, index) => {
@@ -121,6 +123,7 @@ export default function MultiplayerGame() {
                     id: index,
                     text: el,
                     best: false,
+                    done: false
                 };
             });
             setQuestions(questionsArray);
@@ -314,6 +317,8 @@ export default function MultiplayerGame() {
             setCommandBlockVisibility(true);
         } else if(gameState == 4) {
             // Wait response phase
+            setDialogState(false);
+            setContentDialogState(null);
             setEnableForward(false);
             setEnableGuess(false);
             setCommandBlockVisibility(false);
@@ -324,6 +329,8 @@ export default function MultiplayerGame() {
             setAskQuestionDialogState(true);
         } else if(gameState == 5) {
             // Close characters phase
+            setAskQuestionDialogState(false);
+            setContentAskQuestionDialog(null);
             setEnableForward(true);
             restartTimer();
             setQuestionResponse(websocketPayload?.response);
@@ -352,6 +359,8 @@ export default function MultiplayerGame() {
             // Wait question phase
             setQuestionSelected(null);
             setQuestionResponse(null);
+            setDialogState(false);
+            setContentDialogState(null);
 
             // Reset ai close suggestion
             setPhotos(prev =>
@@ -608,6 +617,16 @@ export default function MultiplayerGame() {
         ]);
 
         setQuestionSelected(chosenQuestion);
+        setQuestions(prev => prev.map(el => {
+            if(el.id == chosenQuestion.id) {
+                return {
+                    ...el,
+                    done: true
+                }
+            } else {
+                return {...el}
+            }
+        }));
         axios.post('/spa/multiplayer/choosequestion', {
             id: gameId,
             question: chosenQuestion.id
@@ -661,40 +680,44 @@ export default function MultiplayerGame() {
     // Photo click handle
     function characterClick(event) {
         if(gameState == 2) {
-            let photo = photos.find((el) => el.id == event.currentTarget.dataset.id);
-            setPhotoSelected(photo);
+            if(photoSelected == null) {
+                let photo = photos.find((el) => el.id == event.currentTarget.dataset.id);
+                setPhotoSelected(photo);
 
-            axios.post('/spa/multiplayer/choosecharacter', {
-                id: gameId,
-                character: photo.id
-            });
-            setLoadingDialogContent("Waiting other player...");
-            setLoadingDialogState(true);
+                axios.post('/spa/multiplayer/choosecharacter', {
+                    id: gameId,
+                    character: photo.id
+                });
+                setLoadingDialogContent("Waiting other player...");
+                setLoadingDialogState(true);
+            }
         } else if(gameState == 9) {
-            let photo = photos.find((el) => el.id == event.currentTarget.dataset.id);
-            setGuessCharacter(photo);
-            axios.post('/spa/multiplayer/guesscharacter', {
-                id: gameId,
-                character: photo.id
-            });
-            setMessages((prev) => [
-                ...prev,
-                {
-                    id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-                    color: TextColor.GREEN,
-                    content: 'Guessing: ' + photo.name,
-                    user: {
-                        id: user.id,
-                        username: user.username,
-                        avatar: user.profile_picture_url,
+            if(guessCharacter == null) {
+                let photo = photos.find((el) => el.id == event.currentTarget.dataset.id);
+                setGuessCharacter(photo);
+                axios.post('/spa/multiplayer/guesscharacter', {
+                    id: gameId,
+                    character: photo.id
+                });
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                        color: TextColor.GREEN,
+                        content: 'Guessing: ' + photo.name,
+                        user: {
+                            id: user.id,
+                            username: user.username,
+                            avatar: user.profile_picture_url,
+                        },
+                        time: new Date().toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                        }),
                     },
-                    time: new Date().toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                    }),
-                },
-            ]);
-        } else {
+                ]);
+            }
+        } else if(![0, 1, 2, 9].includes(gameState)) {
             let photosMap = photos.map((el) => {
                 if (el.id == event.currentTarget.dataset.id) {
                     return { ...el, state: !el.state };
@@ -827,7 +850,7 @@ export default function MultiplayerGame() {
                                         data-id={el.id}
                                         key={el.id}
                                     >
-                                        <p>{el.text}</p>
+                                        <p className={el.done ? "text-gray-500" : null}>{el.text}</p>
                                         {(aiEnabled && aiHelp) && el.best ? (
                                             <FaStar />
                                         ) : null}
@@ -932,19 +955,25 @@ export default function MultiplayerGame() {
                 </div>
             </div>
             {/* Modals */}
-            <Dialog open={loadingDialogState}>
+            <Dialog modal={false} open={loadingDialogState}>
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
                 </VisuallyHidden>
-                <DialogContent showCloseButton={false}>
+
+                {/* Overlay personalizzato */}
+                <DialogOverlay className="fixed inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="pointer-events-auto w-1/2 h-1/2 bg-black/40 rounded-xl" />
+                </DialogOverlay>
+
+                <DialogContent showCloseButton={false} className="pointer-events-auto">
                     <div className="flex flex-col items-center gap-y-4 justify-center py-4">
                         <p className="font-extrabold text-4xl text-center">{loadingDialogContent}</p>
                         <Spinner className="size-20" />
                     </div>
                 </DialogContent>
             </Dialog>
-            <Dialog open={dialogState}>
+            <Dialog modal={false} open={dialogState}>
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
@@ -964,7 +993,7 @@ export default function MultiplayerGame() {
                     </div>
                 </DialogContent>
             </Dialog>
-            <Dialog open={askQuestionDialogState}>
+            <Dialog modal={false} open={askQuestionDialogState}>
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
@@ -1001,7 +1030,7 @@ export default function MultiplayerGame() {
                     </div>
                 </DialogContent>
             </Dialog>
-            <Dialog open={responseQuestionDialogState}>
+            <Dialog modal={false} open={responseQuestionDialogState}>
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
@@ -1038,7 +1067,7 @@ export default function MultiplayerGame() {
                     </div>
                 </DialogContent>
             </Dialog>
-            <Dialog open={guessCharacterDialogState}>
+            <Dialog modal={false} open={guessCharacterDialogState}>
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
@@ -1054,7 +1083,7 @@ export default function MultiplayerGame() {
                     </div>
                 </DialogContent>
             </Dialog>
-            <Dialog open={responseGuessCharacterDialogState}>
+            <Dialog modal={false} open={responseGuessCharacterDialogState}>
                 <VisuallyHidden>
                     <DialogTitle></DialogTitle>
                     <DialogDescription></DialogDescription>
