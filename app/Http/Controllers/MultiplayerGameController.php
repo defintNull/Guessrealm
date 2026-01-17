@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Events\GameEvent;
 use App\Events\LobbyEvent;
+use App\Models\Photo;
 use App\Models\User;
 use App\Services\FakeRedis;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class MultiplayerGameController extends Controller
@@ -21,6 +23,7 @@ class MultiplayerGameController extends Controller
      *     aihelp = 0
      *     timeout = 120
      *     game_state = 0
+     *     photos = {{id, name}, {id, name}}
      * game:1:player1
      *     id = 123,
      *     loading = 0
@@ -56,6 +59,7 @@ class MultiplayerGameController extends Controller
                 FakeRedis::hset("game:$id", "aihelp", $lobby['aihelp']);
                 FakeRedis::hset("game:$id", "timeout", $lobby['timeout']);
                 FakeRedis::hset("game:$id", "game_state", 0);
+                FakeRedis::hset("game:$id", "photos", 0);
                 FakeRedis::sadd("games", $id);
 
                 // Creating players
@@ -113,6 +117,28 @@ class MultiplayerGameController extends Controller
                         'profile_picture_path'
                     ])
         ] + $filtered, 200);
+    }
+
+    public function getPhotos(Request $request) : JsonResponse {
+        $request->validate([
+            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+        ]);
+
+        $fotos = [];
+        Cache::lock("game_$request->id", 5)->get(function() use($request, &$fotos) {
+            if(FakeRedis::exists("game:$request->id") && FakeRedis::hget("game:$request->id", "photos") == 0) {
+                $photos = Photo::select(['id', 'name'])->inRandomOrder()->limit(24)->get();
+                FakeRedis::hset("game:$request->id", "photos", $photos->toJson());
+                $fotos = $photos;
+            } else if(FakeRedis::exists("game:$request->id")) {
+                $fotos = json_decode(FakeRedis::hget("game:$request->id", "photos"));
+            }
+        });
+
+
+        return response()->json([
+            'photos' => $fotos,
+        ], 200);
     }
 
     public function endLoading(Request $request) : JsonResponse {
@@ -496,5 +522,11 @@ class MultiplayerGameController extends Controller
         }
 
         return response()->json();
+    }
+
+    public function getBgMusic() {
+        return response()->file(
+                Storage::disk('local')->path('Audios/bgmusic.mp3')
+            );
     }
 }

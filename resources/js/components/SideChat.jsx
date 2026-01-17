@@ -134,7 +134,7 @@ export default function SideChat({
                     onClick={sendMessage}
                     aria-label="Invia"
                     disabled={!inputValue.trim()}
-                    className="ml-2 h-10 w-10 rounded-full flex items-center justify-center bg-white dark:bg-black text-black dark:text-white hover:opacity-90 disabled:opacity-50 border border-gray-200 dark:border-gray-700"
+                    className="ml-2 h-10 w-10 hover:cursor-pointer rounded-full flex items-center justify-center bg-white dark:bg-black text-black dark:text-white hover:opacity-90 disabled:opacity-50 border border-gray-200 dark:border-gray-700"
                 >
                     <SendIcon className="size-4" />
                 </button>

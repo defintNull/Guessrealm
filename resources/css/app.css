@@ -95,6 +95,7 @@
     --sidebar-accent-foreground: oklch(0.208 0.042 265.755);
     --sidebar-border: oklch(0.929 0.013 255.508);
     --sidebar-ring: oklch(0.704 0.04 256.788);
+    --glow-color: rgba(0, 0, 0, 0.35)
 }
 
 .dark {
@@ -129,6 +130,7 @@
     --sidebar-accent-foreground: oklch(0.984 0.003 247.858);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.551 0.027 264.364);
+    --glow-color: rgba(255, 255, 255, 0.8);
 }
 
 @layer base {
@@ -140,15 +142,19 @@
     }
 }
 
+
 @keyframes glow {
     0% {
-        box-shadow: 0 0 0px rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 0px var(--glow-color);
     }
     50% {
-        box-shadow: 0 0 25px rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 25px var(--glow-color);
     }
     100% {
-        box-shadow: 0 0 0px rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 0px var(--glow-color);
     }
 }
-.animate-glow { animation: glow 1.5s ease-in-out infinite; }
+
+.animate-glow {
+    animation: glow 1.5s ease-in-out infinite;
+}

@@ -10,7 +10,7 @@ export default function Timer({time, clickEnable=false, onClick, ...props}) {
 
     return <Card onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
         onClick={(clickEnable ? onClick : null)}
-        className={"items-center justify-center px-4 py-2 min-w-17 " + (clickEnable ? "cursor-pointer" : "")}
+        className={"items-center justify-center px-4 py-2 min-w-17 " + (clickEnable ? "cursor-pointer animate-glow" : "")}
     >
         {(over && clickEnable) ? (
             <FaForward />

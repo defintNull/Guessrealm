@@ -8,6 +8,7 @@ use App\Http\Middleware\SPAMiddleware;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\MultiplayerGameController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
     return view('App');
@@ -20,20 +21,6 @@ Route::get('/checkUsername/{username}', [AuthController::class, 'checkUsername']
 
 Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
     ->name('check_email');
-
-Route::get('/chats', [ChatController::class, 'index'])
-    ->name('chats.index');
-
-Route::get('/chats/{chat}', [ChatController::class, 'show'])
-    ->name('chats.show');
-
-Route::post('/chats/{chat}', [ChatController::class, 'store'])
-    ->name('chats.store');
-
-// 4. SEARCH: Cerca messaggi dentro una chat
-Route::get('/chats/{chat}/search', [ChatController::class, 'search'])
-    ->name('chats.search');
-
 
 
 Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(function () {
@@ -48,6 +35,33 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
     });
 
     Route::middleware('auth:sanctum')->group(function () {
+
+        // 1. LISTA CHAT (Sidebar)
+        Route::get('/chats', [ChatController::class, 'index'])
+            ->name('chats.index');
+
+        // 2. CREA NUOVA CHAT (Modale Ricerca)
+        // Chiama il metodo 'store' che non ha parametri {chat} nell'URL
+        Route::post('/chats', [ChatController::class, 'store'])
+            ->name('chats.create');
+
+        // 3. LEGGI MESSAGGI (Chat aperta)
+        Route::get('/chats/{chat}', [ChatController::class, 'show'])
+            ->name('chats.show');
+
+        // 4. INVIA MESSAGGIO
+        // Chiama 'sendMessage' invece di 'store' (perché l'URL ha l'ID della chat)
+        Route::post('/chats/{chat}', [ChatController::class, 'sendMessage'])
+            ->name('chats.message.send');
+
+        // 5. CERCA NEI MESSAGGI
+        Route::get('/chats/{chat}/search', [ChatController::class, 'search'])
+            ->name('chats.search');
+
+        // 6. CERCA UTENTI (Per la modale nuova chat)
+        Route::get('/users', [UserController::class, 'index'])
+            ->name('users.search');
+
         Route::get("/me", [AuthController::class, 'me'])
             ->name('me');
 
@@ -71,9 +85,14 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
         Route::name('game.')->prefix('game')->group(function () {
             Route::post('photos', [PhotoController::class, 'index'])
                 ->name('photos');
+
             Route::get('photo/show/{id}', [PhotoController::class, 'show'])
                 ->withoutMiddleware([SPAMiddleware::class])
                 ->name('photo.show');
+
+            Route::get('bgmusic', [MultiplayerGameController::class, 'getBgMusic'])
+                ->withoutMiddleware([SPAMiddleware::class])
+                ->name('bgmusic');
         });
 
         Route::name('ai.')->prefix('ai')->group(function () {
@@ -113,6 +132,9 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
         Route::name('multiplayer.')->prefix('multiplayer')->group(function () {
             Route::post('start', [MultiplayerGameController::class, 'startGame'])
                 ->name('start');
+
+            Route::post('photos', [MultiplayerGameController::class, 'getPhotos'])
+                ->name('photos');
 
             Route::post('endloading', [MultiplayerGameController::class, 'endLoading'])
                 ->name('endloading');
