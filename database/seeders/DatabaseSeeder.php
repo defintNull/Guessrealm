@@ -4,25 +4,22 @@ namespace Database\Seeders;
 
 use App\Models\Photo;
 use App\Models\User;
-//use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Str;
 use Database\Seeders\ChatSeeder;
 
 class DatabaseSeeder extends Seeder
 {
-    //use WithoutModelEvents;
-
     /**
      * Seed the application's database.
      */
     public function run(): void
     {
-        //reminder, usare il comando
-        //php artisan migrate:fresh --seed
-        //droppa tutto,remigra e riesegue i seeder
+        // reminder, usare il comando:
+        // php artisan migrate:fresh --seed
 
-        //utente Andrea Luca Di Simone id = 1
+        // 1. CREAZIONE UTENTI REALI (Team + Prof)
+        
+        // Andrea Luca Di Simone (id = 1)
         User::factory()->create([
             'name' => 'Andrea Luca',
             'surname' => 'Di Simone',
@@ -33,7 +30,7 @@ class DatabaseSeeder extends Seeder
             'theme' => 'dark',
         ]);
 
-        //utente Lorenzo D'Angelo id = 2
+        // Lorenzo D'Angelo (id = 2)
         User::factory()->create([
             'name' => 'Lorenzo',
             'surname' => "D'Angelo",
@@ -44,7 +41,7 @@ class DatabaseSeeder extends Seeder
             'theme' => 'dark',
         ]);
 
-        //utente Andrea iannotti  id = 3
+        // Andrea Iannotti (id = 3)
         User::factory()->create([
             'name' => 'Andrea',
             'surname' => 'Iannotti',
@@ -55,7 +52,7 @@ class DatabaseSeeder extends Seeder
             'theme' => 'light',
         ]);
 
-        //utente prof Serafino Cicerone id = 4
+        // Prof Serafino Cicerone (id = 4)
         User::factory()->create([
             'name' => 'Serafino',
             'surname' => "Cicerone",
@@ -66,16 +63,21 @@ class DatabaseSeeder extends Seeder
             'theme' => 'system',
         ]);
 
-        //User::factory(46)->create();
+        // 2. CREAZIONE POPOLAZIONE EXTRA (Fondamentale per i gruppi!)
+        // Creiamo altri 16 utenti random per avere circa 20 persone nel DB.
+        // Questo permette al ChatSeeder di creare gruppi variati.
+        User::factory(16)->create();
 
+
+        // 3. FOTO DEL GIOCO
         for ($i = 1; $i <= 24; $i++) {
             Photo::factory()->create([
                 'path' => sprintf('GamePhotos/%06d.jpg', $i)
             ]);
-}
+        }
 
-        // Seed chats and messages
+        // 4. CHAT E MESSAGGI
+        // Ora che abbiamo ~20 utenti, questo seeder funzionerà alla grande
         $this->call(ChatSeeder::class);
-
     }
 }

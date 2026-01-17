@@ -13,8 +13,12 @@ class Chat extends Model
 
     protected $fillable = [
         'name',
-        'type',
+        'type', // 'private' o 'group'
     ];
+
+    // ==========================================
+    // RELAZIONI
+    // ==========================================
 
     public function messages()
     {
@@ -26,59 +30,97 @@ class Chat extends Model
         return $this->belongsToMany(User::class)->withTimestamps();
     }
 
-    // Relazione per l'ultimo messaggio (Ottimizzata)
+    // Relazione ottimizzata per ottenere l'ultimo messaggio senza fare N+1 query pesanti
     public function latestMessage()
     {
         return $this->hasOne(Message::class)->latestOfMany();
     }
 
+    // ==========================================
+    // ACCESSORS & HELPERS
+    // ==========================================
+
     /**
-     * Helper per ottenere l'altro utente della chat (se privata)
+     * Helper virtuale: Restituisce l'altro utente della chat.
+     * Funziona SOLO se la chat è privata.
+     * Uso: $chat->other_user
      */
     public function getOtherUserAttribute()
     {
-        // Se è un gruppo (ha un nome), non c'è un "altro utente" unico
-        if ($this->name) {
+        // Se è un gruppo, non esiste un "altro utente" unico.
+        if ($this->type === 'group') {
             return null;
         }
-        
-        // Cerca il primo utente che NON è quello loggato
+
+        // Se è privata, cerchiamo l'utente che NON sono io.
         return $this->users->first(fn($user) => $user->id !== Auth::id());
     }
 
     /**
-     * Accessor: Restituisce il Nome da visualizzare (Titolo Gruppo o Nome Utente)
+     * Helper booleano per controllare velocemente il tipo nel frontend/backend
+     * Uso: $chat->is_group
+     */
+    protected function isGroup(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->type === 'group'
+        );
+    }
+
+    /**
+     * Accessor: Restituisce il NOME da visualizzare nell'interfaccia.
+     * - Se Gruppo: Restituisce il nome del gruppo (es. "Calcetto").
+     * - Se Privata: Restituisce il nome dell'interlocutore (es. "Mario").
      * Uso: $chat->display_name
      */
     protected function displayName(): Attribute
     {
         return Attribute::make(
             get: function () {
-                // Se la chat ha un nome (gruppo), usa quello. 
-                // Altrimenti usa il nome dell'altro utente. 
-                // Se l'altro utente non esiste (cancellato), fallback.
-                return $this->name ?? $this->other_user?->name ?? 'Utente Sconosciuto';
+                if ($this->type === 'group') {
+                    return $this->name ?? 'Gruppo senza nome';
+                }
+
+                // Fallback sicuro se l'altro utente è stato eliminato
+                return $this->other_user?->name ?? 'Utente Sconosciuto';
             }
         );
     }
 
     /**
-     * Accessor: Restituisce il Cognome (solo se chat privata)
+     * Accessor: Restituisce il COGNOME (Solo per chat private).
+     * Serve per generare le iniziali corrette (es. Mario Rossi -> MR).
+     * Uso: $chat->display_surname
      */
     protected function displaySurname(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->name ? null : $this->other_user?->surname
+            get: function () {
+                if ($this->type === 'group') {
+                    return null; // I gruppi non hanno cognome
+                }
+
+                return $this->other_user?->surname;
+            }
         );
     }
 
     /**
-     * Accessor: Restituisce l'Avatar corretto
+     * Accessor: Restituisce l'AVATAR corretto.
+     * - Se Gruppo: Restituisce null (o un'immagine di default per gruppi se ne hai una).
+     * - Se Privata: Restituisce l'immagine profilo dell'utente.
+     * Uso: $chat->display_avatar
      */
     protected function displayAvatar(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->name ? null : $this->other_user?->profile_picture_url
+            get: function () {
+                if ($this->type === 'group') {
+                    return null; // O $this->image se aggiungi loghi ai gruppi
+                }
+
+                return $this->other_user?->profile_picture_url;
+            }
         );
     }
 }

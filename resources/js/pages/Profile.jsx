@@ -61,7 +61,7 @@ const formSchema = z.object({
                 message: "Username already exists",
             }
         ),
-        name: z.string().min(1).max(255),
+    name: z.string().min(1).max(255),
     surname: z.string().min(1).max(255),
     email: z
         .string()
@@ -307,6 +307,8 @@ export default function Profile() {
         );
     }
 
+    console.log("Valore attuale nel form:", form.watch("selectedTheme"));
+    console.log("Valore utente dal context:", user?.theme);
     return (
         <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
             <Toaster position="top-right" richColors />
@@ -320,7 +322,6 @@ export default function Profile() {
                             <FieldTitle className="text-xl font-semibold">
                                 Edit Profile
                             </FieldTitle>
-
                             {/* SEZIONE AVATAR */}
                             <div className="flex items-center gap-4">
                                 <Avatar className="h-20 w-20">
@@ -366,7 +367,6 @@ export default function Profile() {
                                     )}
                                 </div>
                             </div>
-
                             {/* CAMPO NOME */}
                             <FormField
                                 control={form.control}
@@ -385,7 +385,6 @@ export default function Profile() {
                                     </FormItem>
                                 )}
                             />
-
                             {/* CAMPO COGNOME */}
                             <FormField
                                 control={form.control}
@@ -404,7 +403,6 @@ export default function Profile() {
                                     </FormItem>
                                 )}
                             />
-
                             {/* CAMPO TEMA */}
                             <FormField
                                 control={form.control}
@@ -413,8 +411,15 @@ export default function Profile() {
                                     <FormItem>
                                         <FormLabel>Theme</FormLabel>
                                         <Select
+                                            // 1. AGGIUNGI QUESTA PROPRIETÀ "key"
+                                            // Questo forza il re-render quando il valore cambia (es. da "" a "dark")
+                                            key={field.value || "theme-select"}
                                             onValueChange={field.onChange}
-                                            value={field.value}
+                                            // 2. ASSICURATI CHE IL VALUE ABBIA UN FALLBACK
+                                            value={field.value || "system"}
+                                            defaultValue={
+                                                field.value || "system"
+                                            }
                                         >
                                             <FormControl>
                                                 <SelectTrigger>
@@ -437,7 +442,6 @@ export default function Profile() {
                                     </FormItem>
                                 )}
                             />
-
                             {/* CAMPO EMAIL */}
                             <FormField
                                 control={form.control}
@@ -464,7 +468,6 @@ export default function Profile() {
                                     </FormItem>
                                 )}
                             />
-
                             {/* CAMPO USERNAME */}
                             <FormField
                                 control={form.control}
@@ -479,21 +482,22 @@ export default function Profile() {
                                                 {...field}
                                             />
                                         </FormControl>
-                                         {form.formState.isValidating && field.value && (
-                                             <p className="text-xs text-muted-foreground">Checking availability...</p>
-                                         )}
+                                        {form.formState.isValidating &&
+                                            field.value && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    Checking availability...
+                                                </p>
+                                            )}
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
-
                             {/* ERRORI ROOT (ERRORE SERVER GENERALE) */}
                             {form.formState.errors.root && (
                                 <p className="text-sm font-medium text-destructive">
                                     {form.formState.errors.root.message}
                                 </p>
                             )}
-
                             {/* PULSANTI AZIONE */}
                             <div className="flex w-full items-center justify-end gap-4 pt-6">
                                 <Button asChild variant="outline" type="button">
