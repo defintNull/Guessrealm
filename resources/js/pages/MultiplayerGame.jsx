@@ -108,10 +108,6 @@ export default function MultiplayerGame() {
         }
     });
 
-    useEffect(() => {
-        console.log(messages);
-    }, [messages]);
-
     // Preprocessing
     useEffect(() => {
         setEnableLobby(false);
@@ -215,7 +211,6 @@ export default function MultiplayerGame() {
         'GameEvent',
         (e) => {
             if(gameState != 13) {
-                console.log(e);
                 setGameState(e.game_phase);
                 setWebsocketPayload(e.payload);
             }
@@ -231,7 +226,6 @@ export default function MultiplayerGame() {
             console.log(e.name);
         })
         .listenForWhisper('message', (e) => {
-            console.log(e);
             setMessages((prev) => [
                 ...prev,
                 {
