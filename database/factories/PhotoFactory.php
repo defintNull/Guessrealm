@@ -16,11 +16,35 @@ class PhotoFactory extends Factory
      */
     public function definition(): array
     {
+        // 50% di probabilità per vocale, 50% per consonante
+        $shouldStartWithVowel = fake()->boolean();
+
+        $name = $this->getNameStartingWith($shouldStartWithVowel);
+
         return [
-            'name' => fake()->firstName(),
-            'mime_type' => "image/png",
+            'name' => $name,
+            'mime_type' => "image/jpg",
             'created_at' => now(),
             'updated_at' => now(),
         ];
+    }
+
+    private function getNameStartingWith(bool $vowel): string
+    {
+        $vowels = ['a', 'e', 'i', 'o', 'u'];
+        $maxAttempts = 100;
+
+        for ($i = 0; $i < $maxAttempts; $i++) {
+            $name = fake()->firstName();
+            $firstLetter = strtolower($name[0]);
+            $startsWithVowel = in_array($firstLetter, $vowels);
+
+            if ($startsWithVowel === $vowel) {
+                return $name;
+            }
+        }
+
+        // Fallback
+        return $vowel ? 'A' . substr(fake()->firstName(), 1) : 'B' . substr(fake()->firstName(), 1);
     }
 }

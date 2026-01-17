@@ -4,77 +4,77 @@ import type { AxiosInstance } from "axios";
  * CONFIGURAZIONE
  */
 const CONFIG = {
-  modelPath: 'model_webgpu.onnx',
-  imageFolder: 'images_256',
-  attributeNames: [
-    'smile',
-    'gender_male',
-    'gender_female',
-    'hair_brown',
-    'hair_black',
-    'hair_blond',
-    'hair_gray',
-    'hair_long',
-    'hair_short',
-    'ethnicity_asian',
-    'ethnicity_black',
-    'ethnicity_latino',
-    'ethnicity_white',
-    'eye_blue',
-    'eye_brown',
-    'eye_green',
-    'has_facial_hair',
-    'a person with eyeglasses'
-  ],
-  attributeGroups: [
-    { name: 'Gender', indices: [1, 2] },
-    { name: 'Hair Color', indices: [3, 4, 5, 6] },
-    { name: 'Hair Length', indices: [7, 8] },
-    { name: 'Ethnicity', indices: [9, 10, 11, 12] },
-    { name: 'Eye Color', indices: [13, 14, 15] }
-  ],
-  displayMapping: {
-    0: 'Sorriso',
-    1: 'Uomo',
-    2: 'Donna',
-    3: 'Capelli Marroni',
-    4: 'Capelli Neri',
-    5: 'Capelli Biondi',
-    6: 'Capelli Grigi',
-    7: 'Capelli Lunghi',
-    8: 'Capelli Corti',
-    9: 'Asiatico',
-    10: 'Nero',
-    11: 'Latino',
-    12: 'Bianco',
-    13: 'Occhi Azzurri',
-    14: 'Occhi Marroni',
-    15: 'Occhi Verdi',
-    16: 'Con Barba',
-    17: 'Con Occhiali'
-  },
-  // Mapping domanda -> tratto -> indici attributi originali
-  questionToIndices: {
-    0: [0],              // Sorriso
-    1: [1],              // Uomo
-    2: [2],              // Donna
-    3: [3],              // Capelli Marroni
-    4: [4],              // Capelli neri
-    5: [5],              // Capelli biondi
-    6: [6],              // Capelli grigi
-    7: [7],              // Capelli lunghi
-    8: [8],              // Capelli corti
-    9: [9],              // Etnia asiatico
-    10: [10],            // Etnia africano
-    11: [11],            // Etnia latino
-    12: [12],            // Etnia caucasica
-    13: [13],            // Occhi azzurri
-    14: [14],            // Occhi marroni
-    15: [15],            // Occhi verdi
-    16: [16],            // Con Barba
-    17: [17]             // Con Occhiali
-  } as Record<number, number[]>
-};
+    modelPath: 'model_webgpu.onnx',
+    imageFolder: 'images_256',
+    attributeNames: [
+        'smile',
+        'gender_male',
+        'gender_female',
+        'hair_brown',
+        'hair_black',
+        'hair_blond',
+        'hair_gray',
+        'hair_long',
+        'hair_short',
+        'ethnicity_asian',
+        'ethnicity_black',
+        'ethnicity_latino',
+        'ethnicity_white',
+        'eye_blue',
+        'eye_brown',
+        'eye_green',
+        'has_facial_hair',
+        'a person with eyeglasses'
+    ],
+    attributeGroups: [
+        { name: 'Gender', indices: [1, 2] },
+        { name: 'Hair Color', indices: [3, 4, 5, 6] },
+        { name: 'Hair Length', indices: [7, 8] },
+        { name: 'Ethnicity', indices: [9, 10, 11, 12] },
+        { name: 'Eye Color', indices: [13, 14, 15] }
+    ],
+    displayMapping: {
+        0: 'Sorriso',
+        1: 'Uomo',
+        2: 'Donna',
+        3: 'Capelli Marroni',
+        4: 'Capelli Neri',
+        5: 'Capelli Biondi',
+        6: 'Capelli Grigi',
+        7: 'Capelli Lunghi',
+        8: 'Capelli Corti',
+        9: 'Asiatico',
+        10: 'Nero',
+        11: 'Latino',
+        12: 'Bianco',
+        13: 'Occhi Azzurri',
+        14: 'Occhi Marroni',
+        15: 'Occhi Verdi',
+        16: 'Con Barba',
+        17: 'Con Occhiali'
+    },
+    // Mapping domanda -> tratto -> indici attributi originali
+    questionToIndices: {
+        0: [0],              // Sorriso
+        1: [1],              // Uomo
+        2: [2],              // Donna
+        3: [3],              // Capelli Marroni
+        4: [4],              // Capelli neri
+        5: [5],              // Capelli biondi
+        6: [6],              // Capelli grigi
+        7: [7],              // Capelli lunghi
+        8: [8],              // Capelli corti
+        9: [9],              // Etnia asiatico
+        10: [10],            // Etnia africano
+        11: [11],            // Etnia latino
+        12: [12],            // Etnia caucasica
+        13: [13],            // Occhi azzurri
+        14: [14],            // Occhi marroni
+        15: [15],            // Occhi verdi
+        16: [16],            // Con Barba
+        17: [17]             // Con Occhiali
+    } as Record<number, number[]>
+    };
 
 
 /**
@@ -317,16 +317,16 @@ export class FacialAttributesClassifier {
       throw new Error('Model not loaded. Call loadModel() first.');
     }
 
-    //console.log(`\n🖼️  Classifying: ${imageName || imageSrc}`);
-    //console.log('━'.repeat(60));
+    console.log(`\n🖼️  Classifying: ${imageName || imageSrc}`);
+    console.log('━'.repeat(60));
 
     try {
       // Pre-processa l'immagine
-      //console.log('⚙️  Preprocessing image...');
+      console.log('⚙️  Preprocessing image...');
       const tensor = await this.preprocessImage(imageSrc);
 
       // Esegui l'inferenza (WebGPU o WASM)
-      //console.log(`🧠 Running inference (${this.executionProvider})...`);
+      console.log(`🧠 Running inference (${this.executionProvider})...`);
       const feeds: Record<string, ort.Tensor> = {};
       const inputName = this.session.inputNames && this.session.inputNames.length > 0
         ? this.session.inputNames[0]
@@ -351,7 +351,7 @@ export class FacialAttributesClassifier {
       }
 
       const predictions = outputTensor.data as ArrayLike<number>;
-      //console.log(`📊 Received ${predictions.length} predictions`);
+      console.log(`📊 Received ${predictions.length} predictions`);
 
       // Crea gli attributi con sigmoide
       const attributes: Attribute[] = [];
@@ -398,15 +398,22 @@ export class FacialAttributesClassifier {
             const probability = this.getQuestionProbability(questionId, attributes);
             const percentage = Math.round(probability * 100);
 
-            // Determina se la risposta è true controllando i tratti dominanti
+            // Determina se la risposta è true
             let answer = false;
-            for (const [displayName] of Array.from(dominantTraits.entries())) {
-              const displayIndices = indices.map(idx =>
-                CONFIG.displayMapping[idx as keyof typeof CONFIG.displayMapping]
-              );
-              if (displayIndices.includes(displayName)) {
-                answer = true;
-                break;
+
+            // Attributi non raggruppati (Sorriso, Barba, Occhiali): usa soglia 50%
+            if (questionId === 0 || questionId === 16 || questionId === 17) {
+              answer = probability > 0.5;
+            } else {
+              // Attributi raggruppati: controlla i tratti dominanti
+              for (const [displayName] of Array.from(dominantTraits.entries())) {
+                const displayIndices = indices.map(idx =>
+                  CONFIG.displayMapping[idx as keyof typeof CONFIG.displayMapping]
+                );
+                if (displayIndices.includes(displayName)) {
+                  answer = true;
+                  break;
+                }
               }
             }
 
@@ -442,7 +449,7 @@ export class FacialAttributesClassifier {
    */
   public async classifyImageById(imageId: number, imageName?: string): Promise<QuestionAnswer[]> {
     const paddedNumber = String(imageId).padStart(6, '0');
-    const imageUrl = `${CONFIG.imageFolder}/${paddedNumber}.png`;
+    const imageUrl = `${CONFIG.imageFolder}/${paddedNumber}.jpg`;
     return this.classifyImage(imageUrl, imageName);
   }
 
@@ -450,8 +457,8 @@ export class FacialAttributesClassifier {
    * Stampa i risultati su console in formato leggibile
    */
   private printResults(answers: QuestionAnswer[], imageName: string): void {
-    //console.log(`\n📋 Results for: ${imageName}`);
-    //console.log('═'.repeat(60));
+    console.log(`\n📋 Results for: ${imageName}`);
+    console.log('═'.repeat(60));
 
     const questionLabels: Record<number, string> = {
       0: 'Sorriso',
@@ -481,12 +488,12 @@ export class FacialAttributesClassifier {
       const answerStr = qa.answer ? '✓ Sì' : '✗ No';
       const bar = '█'.repeat(Math.round(qa.percentage / 10));
 
-      //console.log(
-      //  `${String(qa.questionId).padStart(2)}. ${label.padEnd(20)} → ${answerStr.padEnd(6)} [${bar.padEnd(10)}] ${qa.percentage}%`
-      //);
+      console.log(
+        `${String(qa.questionId).padStart(2)}. ${label.padEnd(20)} → ${answerStr.padEnd(6)} [${bar.padEnd(10)}] ${qa.percentage}%`
+      );
     });
 
-    //console.log('═'.repeat(60));
+    console.log('═'.repeat(60));
   }
 
   /**
