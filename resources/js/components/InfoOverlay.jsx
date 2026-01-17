@@ -57,7 +57,7 @@ export default function InfoOverlay() {
       {visible && (
         <div
           className="
-            fixed inset-0 z-40
+            fixed inset-0 z-40 dark:text-gray-900
             bg-black/50 backdrop-blur-sm
             flex items-center justify-center
           "
