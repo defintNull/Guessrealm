@@ -21,12 +21,19 @@ Route::get('/checkUsername/{username}', [AuthController::class, 'checkUsername']
 Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
     ->name('check_email');
 
-
-Route::get('/chats/{chat}', [ChatController::class, 'index'])
+Route::get('/chats', [ChatController::class, 'index'])
     ->name('chats.index');
 
-Route::post('/chats/{chat?}', [ChatController::class, 'store'])
+Route::get('/chats/{chat}', [ChatController::class, 'show'])
+    ->name('chats.show');
+
+Route::post('/chats/{chat}', [ChatController::class, 'store'])
     ->name('chats.store');
+
+// 4. SEARCH: Cerca messaggi dentro una chat
+Route::get('/chats/{chat}/search', [ChatController::class, 'search'])
+    ->name('chats.search');
+
 
 
 Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(function () {
@@ -103,7 +110,7 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
                 ->name('setReady');
         });
 
-        Route::name('multiplayer.')->prefix('multiplayer')->group(function() {
+        Route::name('multiplayer.')->prefix('multiplayer')->group(function () {
             Route::post('start', [MultiplayerGameController::class, 'startGame'])
                 ->name('start');
 

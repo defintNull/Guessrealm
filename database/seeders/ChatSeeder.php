@@ -5,12 +5,12 @@ namespace Database\Seeders;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+//use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class ChatSeeder extends Seeder
 {
-    use WithoutModelEvents;
+    //use WithoutModelEvents;
 
     public function run(): void
     {
