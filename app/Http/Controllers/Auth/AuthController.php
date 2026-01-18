@@ -212,6 +212,11 @@ class AuthController extends Controller
             // FIX CRITICO: Assegno a $validatedData, così user->update() lo salva davvero!
             $validatedData['profile_picture_path'] = $path;
             $validatedData['profile_picture_mime'] = $file->getClientMimeType();
+
+            // Forza l'aggiornamento di 'updated_at' anche se il path è identico a prima
+            if ($user->profile_picture_path === $path) {
+                $user->touch();
+            }
         }
 
         // Aggiorna DB

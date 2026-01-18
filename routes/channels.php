@@ -36,11 +36,19 @@ Broadcast::channel('game.{id}.chat', function ($user, $id) {
         return false;
     }
 
-    return
-        (
+    return (
             FakeRedis::hget("game:$id:player1", "id") == $user->id ||
             FakeRedis::hget("game:$id:player2", "id") == $user->id
         );
+});
+
+// Canale Presence "online"
+// Questo canale serve solo a tracciare chi è connesso globalmente.
+Broadcast::channel('online', function ($user) {
+    if ($user) {
+        // Restituiamo i dati che vogliamo vedere nel frontend
+        return ['id' => $user->id, 'name' => $user->name];
+    }
 });
 
 Broadcast::channel('chat.{id}', function ($user, $id) {

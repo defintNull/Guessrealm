@@ -43,6 +43,7 @@ export default function Testchat() {
     const [messages, setMessages] = useState([]);
     const [isSending, setIsSending] = useState(false); // SideChat lo mette a TRUE quando premi invio
     const [isSearchOpen, setIsSearchOpen] = useState(false);
+    const [onlineUsers, setOnlineUsers] = useState([]); // Array di ID utenti online
 
     const userInitials = getAvatarInitials(user);
 
@@ -132,7 +133,7 @@ export default function Testchat() {
 
     // // Chat callback
     function sendMessageChat(updater) {
-        setMessages(prev => {
+        setMessages((prev) => {
             const new_messages = updater(prev);
 
             axios.post('/spa/chats/' + selectedChatId, {
@@ -142,6 +143,12 @@ export default function Testchat() {
             return new_messages;
         });
     }
+
+    // Recuperiamo l'ID dell'altro utente (se è una chat privata)
+    // Nota: questa logica funziona solo per chat 1-a-1. Per i gruppi è diverso.
+    const otherUserId = activeChatObj?.users?.find((u) => u.id !== user.id)?.id;
+
+    const isOnline = otherUserId ? onlineUsers.includes(otherUserId) : false;
 
     return (
         <div className="fixed inset-0 z-50 flex bg-background text-foreground overflow-hidden">
@@ -246,12 +253,12 @@ export default function Testchat() {
                     )}
                 </ScrollArea>
 
-                <div className="p-3 border-t border-border flex justify-between items-center text-muted-foreground">
+                {/* <div className="p-3 border-t border-border flex justify-between items-center text-muted-foreground">
                     <span className="text-xs">v1.0.0</span>
                     <Button variant="ghost" size="icon">
                         <Settings className="h-4 w-4" />
                     </Button>
-                </div>
+                </div> */}
             </div>
 
             {/* LATO DESTRO */}
@@ -265,12 +272,15 @@ export default function Testchat() {
                                         {activeChatName}
                                     </h2>
                                     <span className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-                                        <span className="block w-2 h-2 rounded-full bg-green-500 animate-pulse" />{" "}
-                                        Online
+                                        <span
+                                            className={`block w-2 h-2 rounded-full ${isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"}`}
+                                        />
+                                        {isOnline ? "Online" : "Offline"}
                                     </span>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
+
+                            {/* <div className="flex items-center gap-2">
                                 <Button
                                     variant="ghost"
                                     size="icon"
@@ -284,7 +294,7 @@ export default function Testchat() {
                                 <Button variant="ghost" size="icon">
                                     <MoreVertical className="h-5 w-5" />
                                 </Button>
-                            </div>
+                            </div> */}
                         </div>
 
                         {isSearchOpen && (
