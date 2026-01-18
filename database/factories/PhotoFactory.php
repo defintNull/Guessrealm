@@ -23,7 +23,7 @@ class PhotoFactory extends Factory
 
         return [
             'name' => $name,
-            'mime_type' => "image/jpg",
+            'mime_type' => "image/jpeg",
             'created_at' => now(),
             'updated_at' => now(),
         ];

@@ -57,3 +57,14 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+### Commands
+
+```bash
+php artisan serve
+npm run dev
+php artisan reverb:start
+php artisan queue:work --queue=high,medium,low
+php artisan schedule:work
+uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+```
