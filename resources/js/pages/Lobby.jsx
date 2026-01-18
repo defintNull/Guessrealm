@@ -47,7 +47,7 @@ export default function Lobby() {
         }).then((res) => {
             setLobbyName(res.data.lobby.name);
             setLobbyCode(res.data.lobby.code);
-            setLobbyVisibility(!res.data.lobby.visibility);
+            setLobbyVisibility(res.data.lobby.visibility);
             setPlayers(res.data.lobby.players);
         });
     }, []);
