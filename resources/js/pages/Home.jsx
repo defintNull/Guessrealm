@@ -18,7 +18,7 @@ export default function Home() {
 
             <div className="flex flex-col items-center gap-2 mt-8">
                 <img
-                    src="images/favicon.png"   // <-- cambia il percorso del tuo PNG
+                    src="images/favicon.png"
                     alt="Logo"
                     className="w-32 h-auto"
                 />
