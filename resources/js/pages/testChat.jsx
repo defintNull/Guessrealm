@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import NewChatDialog from "@/components/NewChatDialog";
 import NewGroupDialog from "@/components/NewGroupDialog";
+import { TextColor } from "@/components/ColoredText";
+import { useEcho } from "@laravel/echo-react";
 
 // Funzione Helper (Invariata)
 const getAvatarInitials = (entity) => {
@@ -43,6 +45,18 @@ export default function Testchat() {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
 
     const userInitials = getAvatarInitials(user);
+
+    // Websocket
+    useEcho(
+        'chat.' + selectedChatId,
+        'ChatEvent',
+        (e) => {
+            setMessages(prev => [
+                ...prev,
+                e
+            ]);
+        }
+    );
 
     // 1. FETCH LISTA CHAT (Invariato)
     useEffect(() => {
@@ -74,49 +88,7 @@ export default function Testchat() {
             }
         };
         fetchMessages();
-        const intervalId = setInterval(fetchMessages, 3000);
-        return () => {
-            controller.abort();
-            clearInterval(intervalId);
-        };
     }, [selectedChatId]);
-
-    // =========================================================================
-    // 🚀 3. LOGICA DI INVIO MESSAGGI (NUOVO)
-    // =========================================================================
-    useEffect(() => {
-        // Questa logica parte SOLO se SideChat ha messo isSending a true
-        if (isSending && messages.length > 0) {
-            // 1. Recuperiamo il messaggio "temporaneo" che SideChat ha appena aggiunto alla lista
-            const messageToSend = messages[messages.length - 1];
-
-            // 2. Facciamo la chiamata reale al backend
-            axios
-                .post(`/spa/chats/${selectedChatId}`, {
-                    content: messageToSend.content,
-                })
-                .then((res) => {
-                    // SUCCESSO: Il server ci risponde con il messaggio "Vero" (con ID reale, timestamp corretto, ecc.)
-                    const realMessage = res.data.data;
-
-                    // Sostituiamo il messaggio "temporaneo" con quello "reale" nella lista
-                    setMessages((prev) =>
-                        prev.map((msg, index) =>
-                            // Se è l'ultimo messaggio (quello appena inviato), lo aggiorniamo
-                            index === prev.length - 1 ? realMessage : msg,
-                        ),
-                    );
-                })
-                .catch((error) => {
-                    console.error("Errore invio messaggio:", error);
-                    // Opzionale: Qui potresti mostrare un toast di errore o rimuovere il messaggio fallito
-                })
-                .finally(() => {
-                    // 3. Sblocchiamo la chat permettendo nuovi invii
-                    setIsSending(false);
-                });
-        }
-    }, [isSending]); // <-- Ascolta i cambiamenti di questa variabile
 
     // ... RESTO DEL RENDER (Invariato) ...
     const activeChatObj = chats.find((c) => c.id === selectedChatId);
@@ -146,6 +118,19 @@ export default function Testchat() {
         setSelectedChatId(newChat.id);
     };
 
+    // Chat callback
+    function sendMessageChat(updater) {
+        setMessages(prev => {
+            const new_messages = updater(prev);
+
+            axios.post('/spa/chats/' + selectedChatId, {
+                content: new_messages[new_messages.length - 1].content
+            }).then();
+
+            return new_messages;
+        });
+    }
+
     return (
         <div className="fixed inset-0 z-50 flex bg-background text-foreground overflow-hidden">
             {/* LATO SINISTRO */}
@@ -158,7 +143,7 @@ export default function Testchat() {
                                 {userInitials}
                             </AvatarFallback>
                         </Avatar>
-                        <span className="font-semibold text-sm truncate max-w-[120px]">
+                        <span className="font-semibold text-sm truncate max-w-30">
                             {user
                                 ? user.surname
                                     ? `${user.name} ${user.surname}`
@@ -238,7 +223,7 @@ export default function Testchat() {
                                             </p>
                                         </div>
                                         {chat.unread > 0 && (
-                                            <span className="bg-primary text-primary-foreground text-[10px] h-5 min-w-[1.25rem] px-1 flex items-center justify-center rounded-full ml-1">
+                                            <span className="bg-primary text-primary-foreground text-[10px] h-5 min-w-5 px-1 flex items-center justify-center rounded-full ml-1">
                                                 {chat.unread}
                                             </span>
                                         )}
@@ -302,11 +287,8 @@ export default function Testchat() {
 
                         <div className="flex-1 overflow-hidden">
                             <SideChat
-                                chatId={selectedChatId}
                                 messages={messages}
-                                setMessages={setMessages}
-                                isSending={isSending}
-                                setIsSending={setIsSending}
+                                setMessages={sendMessageChat}
                                 className="h-full border-none shadow-none rounded-none [&_.card-header]:hidden"
                             />
                         </div>
