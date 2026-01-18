@@ -15,13 +15,14 @@ import {
     Loader2,
 } from "lucide-react";
 import NewChatDialog from "@/components/NewChatDialog";
+import NewGroupDialog from "@/components/NewGroupDialog";
 
 // Funzione Helper (Invariata)
 const getAvatarInitials = (entity) => {
     if (!entity) return "??";
     if (entity.name && entity.surname) {
         return `${entity.name.charAt(0)}${entity.surname.charAt(
-            0
+            0,
         )}`.toUpperCase();
     }
     if (entity.name || entity.username) {
@@ -102,8 +103,8 @@ export default function Testchat() {
                     setMessages((prev) =>
                         prev.map((msg, index) =>
                             // Se è l'ultimo messaggio (quello appena inviato), lo aggiorniamo
-                            index === prev.length - 1 ? realMessage : msg
-                        )
+                            index === prev.length - 1 ? realMessage : msg,
+                        ),
                     );
                 })
                 .catch((error) => {
@@ -136,6 +137,15 @@ export default function Testchat() {
         setSelectedChatId(chatObj.id);
     };
 
+    // Funzione che riceve la nuova chat dal backend e la aggiunge in cima alla lista
+    const addNewChatToSidebar = (newChat) => {
+        // 1. Aggiunge la chat in cima all'array
+        setChats((prevChats) => [newChat, ...prevChats]);
+
+        // 2. (Opzionale) Apre subito la chat appena creata
+        setSelectedChatId(newChat.id);
+    };
+
     return (
         <div className="fixed inset-0 z-50 flex bg-background text-foreground overflow-hidden">
             {/* LATO SINISTRO */}
@@ -162,8 +172,8 @@ export default function Testchat() {
                             {/* ... avatar utente ... */}
                         </div>
 
-                        {/* SOSTITUISCI IL VECCHIO BUTTON CON QUESTO: */}
                         <NewChatDialog onChatCreated={handleChatCreated} />
+                        <NewGroupDialog onChatCreated={addNewChatToSidebar} />
                     </div>
                 </div>
 
