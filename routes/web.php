@@ -34,7 +34,7 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->name('register');
     });
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware('auth:web')->group(function () {
 
         // 1. LISTA CHAT (Sidebar)
         Route::get('/chats', [ChatController::class, 'index'])
