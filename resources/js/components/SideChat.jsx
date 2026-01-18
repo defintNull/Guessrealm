@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 export default function SideChat({
     messages,
     setMessages,
+    enableColor = true,
     ...props
 }) {
     const { user } = useAuth();
@@ -28,7 +29,7 @@ export default function SideChat({
             ...prev,
             {
                 id: prev.length ? prev[prev.length - 1].id + 1 : 1,
-                color: TextColor.GREEN,
+                color: enableColor ? TextColor.GREEN : TextColor.GRAY,
                 content: trimmedValue,
                 user: {
                     id: user.id,

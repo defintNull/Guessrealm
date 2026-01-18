@@ -46,17 +46,29 @@ export default function Testchat() {
 
     const userInitials = getAvatarInitials(user);
 
+
     // Websocket
-    useEcho(
-        'chat.' + selectedChatId,
-        'ChatEvent',
-        (e) => {
-            setMessages(prev => [
-                ...prev,
-                e
-            ]);
+    useEffect(() => {
+        if (!selectedChatId) return;
+
+        const channel = window.Echo.private('chat.' + selectedChatId);
+        channel.listen(
+            'ChatEvent',
+            (e) => {
+                setMessages(prev => [
+                    ...prev,
+                    e.message
+                ]);
+            }
+        )
+
+        setMessages([]);
+
+        return () => {
+            window.Echo.leave('chat.' + selectedChatId);
         }
-    );
+    }, [selectedChatId]);
+
 
     // 1. FETCH LISTA CHAT (Invariato)
     useEffect(() => {
@@ -118,14 +130,14 @@ export default function Testchat() {
         setSelectedChatId(newChat.id);
     };
 
-    // Chat callback
+    // // Chat callback
     function sendMessageChat(updater) {
         setMessages(prev => {
             const new_messages = updater(prev);
 
             axios.post('/spa/chats/' + selectedChatId, {
                 content: new_messages[new_messages.length - 1].content
-            }).then();
+            });
 
             return new_messages;
         });
@@ -289,6 +301,7 @@ export default function Testchat() {
                             <SideChat
                                 messages={messages}
                                 setMessages={sendMessageChat}
+                                enableColor={false}
                                 className="h-full border-none shadow-none rounded-none [&_.card-header]:hidden"
                             />
                         </div>

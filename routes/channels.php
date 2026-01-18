@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Chat;
 use App\Services\FakeRedis;
 use Illuminate\Support\Facades\Broadcast;
 
@@ -41,3 +42,14 @@ Broadcast::channel('game.{id}.chat', function ($user, $id) {
             FakeRedis::hget("game:$id:player2", "id") == $user->id
         );
 });
+
+Broadcast::channel('chat.{id}', function ($user, $id) {
+    $chat = Chat::find($id);
+
+    if (! $chat) {
+        return false;
+    }
+
+    return $chat->users()->where('users.id', $user->id)->exists();
+});
+
