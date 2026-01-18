@@ -307,8 +307,6 @@ export default function Profile() {
         );
     }
 
-    console.log("Valore attuale nel form:", form.watch("selectedTheme"));
-    console.log("Valore utente dal context:", user?.theme);
     return (
         <div className="w-full min-h-svh flex py-12 flex-col items-center justify-center">
             <Toaster position="top-right" richColors />
