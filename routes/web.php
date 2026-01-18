@@ -14,7 +14,7 @@ Route::get('/', function () {
     return view('App');
 });
 
-Route::get('avatar/{username}', [AuthController::class, 'profilePicture'])->name('user.avatar');
+
 
 Route::get('/checkUsername/{username}', [AuthController::class, 'checkUsername'])
     ->name('check_username');
@@ -36,6 +36,9 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
 
     Route::middleware('auth:web')->group(function () {
 
+        Route::get('avatar/{username}', [AuthController::class, 'profilePicture'])
+            ->withoutMiddleware(SPAMiddleware::class)
+            ->name('user.avatar');
 
         Route::group([], function () {
             // 1. LISTA CHAT (Sidebar)

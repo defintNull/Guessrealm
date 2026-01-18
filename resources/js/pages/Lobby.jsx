@@ -95,8 +95,7 @@ export default function Lobby() {
                         {
                             id: e.user.id,
                             username: e.user.username,
-                            profile_picture_path: e.user.profile_picture_path,
-                            profile_picture_mime: e.user.profile_picture_mime,
+                            profile_picture_url: e.user.profile_picture_url,
                             status: false
                         }
                     ]);
@@ -233,7 +232,7 @@ export default function Lobby() {
                                 {players == null ? null : players.map(el => {
                                     return <div key={el?.id} className="flex flex-row items-center gap-x-4">
                                                 <Avatar className="h-10 w-10">
-                                                    <AvatarImage src={el?.profile_picture_path} />
+                                                    <AvatarImage src={el?.profile_picture_url} />
                                                     <AvatarFallback>
                                                         {el?.username?.substring(0, 2).toUpperCase()}
                                                     </AvatarFallback>

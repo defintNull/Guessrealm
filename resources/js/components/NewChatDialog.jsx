@@ -30,12 +30,12 @@ export default function NewChatDialog({ onChatCreated }) {
             try {
                 // CORREZIONE 1: Aggiunto /spa/ all'URL
                 const res = await axios.get(`/spa/users?search=${search}`);
-                
+
                 // CORREZIONE 2: Controllo anti-crash. Se non è un array, usiamo array vuoto.
                 setUsers(Array.isArray(res.data) ? res.data : []);
             } catch (error) {
                 console.error("Errore ricerca utenti:", error);
-                setUsers([]); 
+                setUsers([]);
             } finally {
                 setLoading(false);
             }
