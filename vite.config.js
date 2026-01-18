@@ -18,11 +18,23 @@ export default defineConfig({
     ],
 
     optimizeDeps: {
-        exclude: ['onnxruntime-web'],
+        exclude: [
+            'onnxruntime-web',
+            'onnxruntime-web/webgpu'
+        ],
+
     },
 
     build: {
-        target: "esnext",
+        target: 'esnext',
+        minify: 'esbuild',
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    'onnxruntime-web': ['onnxruntime-web'],
+                },
+            },
+        },
     },
 
     resolve: {
