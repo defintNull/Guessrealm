@@ -216,7 +216,7 @@ export default function Lobby() {
                             <span>Lobby name:</span>
                             <span>{ lobbyName }</span>
                         </p>
-                        {lobbyVisibility && (<p className="flex flex-row w-4/5 justify-between font-semibold text-xl">
+                        {lobbyVisibility == 1 && (<p className="flex flex-row w-4/5 justify-between font-semibold text-xl">
                             <span>Lobby code:</span>
                             <span>{ lobbyCode }</span>
                         </p>)}
