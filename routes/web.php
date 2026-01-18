@@ -36,6 +36,8 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
 
     Route::middleware('auth:web')->group(function () {
 
+
+        Route::group(function () {
         // 1. LISTA CHAT (Sidebar)
         Route::get('/chats', [ChatController::class, 'index'])
             ->name('chats.index');
@@ -61,6 +63,7 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
         // 6. CERCA UTENTI (Per la modale nuova chat)
         Route::get('/users', [UserController::class, 'index'])
             ->name('users.search');
+        });
 
         Route::get("/me", [AuthController::class, 'me'])
             ->name('me');
