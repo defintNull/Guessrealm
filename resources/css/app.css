@@ -20,6 +20,13 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: "Boring_Sans";
+    src: url("../../public/fonts/Boring-Sans-A-Heavy-trial.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+}
+
 
 @theme inline {
     --radius-sm: calc(var(--radius) - 4px);
