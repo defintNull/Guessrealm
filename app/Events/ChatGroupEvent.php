@@ -2,15 +2,15 @@
 
 namespace App\Events;
 
-use App\Http\Resources\MessageResource;
-use App\Models\Message;
+use App\Http\Resources\ChatResource;
+use App\Models\Chat;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ChatEvent implements ShouldBroadcast
+class ChatGroupEvent implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -19,7 +19,7 @@ class ChatEvent implements ShouldBroadcast
      */
     public function __construct(
         private int $user_id,
-        private Message $message
+        private Chat $chat
     )
     {}
 
@@ -31,7 +31,7 @@ class ChatEvent implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel("chat.".$this->user_id),
+            new PrivateChannel('chat.'.$this->user_id),
         ];
     }
 
@@ -43,8 +43,7 @@ class ChatEvent implements ShouldBroadcast
     public function broadcastWith(): array
     {
         return [
-            'chat_id' => $this->message->chat_id,
-            'message' => new MessageResource($this->message)
+            'chat' => new ChatResource($this->chat)
         ];
     }
 

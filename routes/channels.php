@@ -52,12 +52,6 @@ Broadcast::channel('online', function ($user) {
 });
 
 Broadcast::channel('chat.{id}', function ($user, $id) {
-    $chat = Chat::find($id);
-
-    if (! $chat) {
-        return false;
-    }
-
-    return $chat->users()->where('users.id', $user->id)->exists();
+    return $user->id == $id;
 });
 

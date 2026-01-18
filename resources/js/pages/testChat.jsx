@@ -49,19 +49,28 @@ export default function Testchat() {
 
 
     // Websocket
+    useEcho(
+        'chat.' + user.id,
+        ['ChatEvent'],
+        (e) => {
+            if(selectedChatId == e.chat_id) {
+                setMessages(prev => [...prev, e.message]);
+            } else {
+                // PALLINO VERDE CHAT
+            }
+        }
+    );
+
+    useEcho(
+        'chat.' + user.id,
+        ['ChatGroupEvent'],
+        (e) => {
+            setChats(prev => [e.chat, ...prev]);
+        }
+    );
+
     useEffect(() => {
         if (!selectedChatId) return;
-
-        const channel = window.Echo.private('chat.' + selectedChatId);
-        channel.listen(
-            'ChatEvent',
-            (e) => {
-                setMessages(prev => [
-                    ...prev,
-                    e.message
-                ]);
-            }
-        )
 
         setMessages([]);
 

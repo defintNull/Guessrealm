@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\ChatEvent;
+use App\Events\ChatGroupEvent;
 use App\Models\Chat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -60,7 +61,16 @@ class ChatController extends Controller
             'content' => $data['content'],
         ]);
 
-        broadcast(new ChatEvent($message))->toOthers();
+        // Websocket
+        $users = $chat->users;
+        foreach($users as $user) {
+            if($user->id == $request->user()->id) {
+                continue;
+            }
+            echo $user->id;
+            broadcast(new ChatEvent($user->id, $message->load('user')));
+        }
+
         return new MessageResource($message->load('user'));
     }
 
@@ -103,10 +113,21 @@ class ChatController extends Controller
             }
 
             // Transazione per creare chat + associare utenti
-            return DB::transaction(function () use ($myId, $otherUserId) {
+            return DB::transaction(function () use ($myId, $otherUserId, $request) {
                 $chat = Chat::create(['type' => 'private']);
                 $chat->users()->attach([$myId, $otherUserId]);
-                return new ChatResource($chat->load(['users', 'latestMessage']));
+                $chat->load(['users', 'latestMessage']);
+
+                // Websocket
+                $users = $chat->users;
+                foreach($users as $user) {
+                    if($user->id == $request->user()->id) {
+                        continue;
+                    }
+                    broadcast(new ChatGroupEvent($user->id, $chat));
+                }
+
+                return new ChatResource($chat);
             });
         }
 
