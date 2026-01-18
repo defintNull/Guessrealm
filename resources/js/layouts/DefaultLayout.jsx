@@ -28,7 +28,7 @@ export default function DefaultLayout() {
         try{
             await axios.post('/spa/logout');
             setUser(null);
-            navigate("/");
+            navigate("/", { replace: true });
             toast.success("Logged out successfully");
         } catch (error) {
             toast.error("Logout failed");

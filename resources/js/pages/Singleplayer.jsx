@@ -672,7 +672,7 @@ export default function Singleplayer() {
 
     function dialogClickHandle() {
         if (endGame) {
-            navigate("/");
+            navigate("/", { replace: true });
         }
 
         setDialogState(false);

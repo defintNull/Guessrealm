@@ -187,21 +187,21 @@ export default function Lobby() {
                 id: lobbyID
             }).finally(() => {
                 setEnableLobby(false);
-                navigate('/');
+                navigate('/', { replace: true });
             });
         } else {
             axios.post('/spa/lobby/exitlobby', {
                 id: lobbyID
             }).finally(() => {
                 setEnableLobby(false);
-                navigate('/');
+                navigate('/', { replace: true });
             });
         }
     }
 
     function dialogLobbyStateClickHandle() {
         setEnableLobby(false);
-        navigate('/');
+        navigate('/', { replace: true });
     }
 
     return <div className="grow flex flex-col items-center justify-center">

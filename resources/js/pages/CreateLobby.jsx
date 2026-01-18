@@ -96,7 +96,7 @@ export default function CreateLobby() {
                 <div className="flex flex-row w-full justify-end gap-x-4 pt-10">
                     <Button className="cursor-pointer" onClick={(e) => {
                         e.preventDefault();
-                        navigate("/");
+                        navigate("/", { replace: true });
                     }}>Annulla</Button>
                     <Button className="cursor-pointer">Create</Button>
                 </div>
