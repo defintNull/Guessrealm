@@ -33,7 +33,7 @@ const loginSchema = z.object({
 });
 
 export default function Login() {
-    
+
     let navigate = useNavigate();
     const { setUser } = useAuth();
 
@@ -52,7 +52,7 @@ export default function Login() {
             await axios.get("/sanctum/csrf-cookie");
             let res = await axios.post("spa/login", values);
             setUser(res.data.user);
-            navigate("/");
+            navigate("/", { replace: true });
         } catch (error) {
             if (error.response) {
                 const status = error.response.status;

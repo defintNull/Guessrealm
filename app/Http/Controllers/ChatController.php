@@ -47,7 +47,6 @@ class ChatController extends Controller
     /**
      * 3. SEND MESSAGE: Invia un nuovo messaggio in una chat esistente
      * Rotta: POST /api/chats/{chat}
-     * (Ho rinominato questo metodo da 'store' a 'sendMessage' per evitare conflitti)
      */
     public function sendMessage(Request $request, Chat $chat)
     {
@@ -69,28 +68,30 @@ class ChatController extends Controller
      */
     public function store(Request $request)
     {
-        // ... validazione e variabili ...
+        // 1. Validazione intelligente
         $data = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'type' => 'nullable|string|in:private,group',
-            'name' => 'nullable|string',
+            'type' => 'required|string|in:private,group',
+            // Se è privata, serve user_id singolo
+            'user_id' => 'required_if:type,private|exists:users,id',
+            // Se è gruppo, serve name e un array di users
+            'name' => 'required_if:type,group|nullable|string|max:255',
+            'users' => 'required_if:type,group|array|min:1', // Almeno 1 altro utente oltre a te
+            'users.*' => 'exists:users,id' // Ogni ID nell'array deve esistere
         ]);
-        $myId = auth()->id();
-        $type = $data['type'] ?? 'private';
 
-        // CASO A: CHAT PRIVATA
+        $myId = auth()->id();
+        $type = $data['type'];
+
+        // --- CASO A: CHAT PRIVATA ---
         if ($type === 'private') {
             $otherUserId = $data['user_id'];
 
-            // 1. Controllo Idempotenza (FIX AMBIGUITY)
+            // Controllo Idempotenza (Se esiste già, ritornala)
             $existingChat = Chat::where('type', 'private')
                 ->whereHas('users', function ($q) use ($myId) {
-                    // PRIMA ERA: $q->where('id', $myId);  <-- ERRORE
-                    // ORA: specifichiamo la tabella
                     $q->where('users.id', $myId);
                 })
                 ->whereHas('users', function ($q) use ($otherUserId) {
-                    // PRIMA ERA: $q->where('id', $otherUserId); <-- ERRORE
                     $q->where('users.id', $otherUserId);
                 })
                 ->first();
@@ -110,16 +111,18 @@ class ChatController extends Controller
         // --- CASO B: GRUPPO ---
         if ($type === 'group') {
             return DB::transaction(function () use ($myId, $data) {
+                // 1. Creiamo la chat con il nome
                 $chat = Chat::create([
                     'type' => 'group',
-                    'name' => $data['name'] ?? 'Nuovo Gruppo',
+                    'name' => $data['name'], 
                 ]);
 
-                $usersToAttach = [$myId];
-                if (!empty($data['user_id'])) {
-                    $usersToAttach[] = $data['user_id'];
-                }
-                $chat->users()->attach($usersToAttach);
+                // 2. Prepariamo la lista utenti (Io + quelli selezionati)
+                // Usiamo array_unique per evitare duplicati se per sbaglio c'è il mio ID due volte
+                $userIds = array_unique(array_merge([$myId], $data['users']));
+
+                // 3. Alleghiamo tutti
+                $chat->users()->attach($userIds);
 
                 return new ChatResource($chat->load(['users', 'latestMessage']));
             });

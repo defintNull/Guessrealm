@@ -760,7 +760,7 @@ export default function MultiplayerGame() {
     // Dialog State click handle
     function dialogClickHandle() {
         if(gameState == 13) {
-            navigate('/');
+            navigate('/', { replace: true });
             setEnableMultiplayerGame(false);
         } else {
             setDialogState(false);
