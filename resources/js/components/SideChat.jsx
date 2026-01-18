@@ -70,7 +70,14 @@ export default function SideChat({
                 <CardTitle>Chat</CardTitle>
             </CardHeader>
 
-            <ScrollArea ref={scrollRef} className="flex-1 h-0 px-4">
+            <ScrollArea
+                ref={scrollRef}
+                className="
+                    flex-1 h-0 px-4 overflow-x-hidden
+                    [&_[data-radix-scroll-area-viewport]>div]:min-w-0
+                    [&_[data-radix-scroll-area-viewport]>div]:max-w-full
+                "
+            >
                 {messages.map((msg, index) => {
                     // Verifichiamo se il mittente è lo stesso del messaggio precedente
 
@@ -97,7 +104,7 @@ export default function SideChat({
                                 )}
                             </div>
 
-                            <div className="flex-1 flex flex-col">
+                            <div className="flex-1 min-w-0 flex flex-col">
                                 {/* Anche il nome lo mostriamo solo se è un "nuovo" blocco di messaggi */}
                                 {!isSameUser && (
                                     <div className="flex items-center justify-between text-[10px] mb-1">
@@ -112,6 +119,7 @@ export default function SideChat({
 
                                 <ColoredText
                                     color={msg?.color || TextColor.GRAY}
+                                    className="w-full wrap-break-word whitespace-pre-wrap"
                                 >
                                     {msg?.content || ""}
                                 </ColoredText>

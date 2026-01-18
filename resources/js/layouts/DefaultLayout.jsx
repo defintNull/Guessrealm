@@ -1,6 +1,6 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import {
     NavigationMenu,
@@ -19,6 +19,21 @@ export default function DefaultLayout() {
     const navigate = useNavigate();
     const { user, setUser } = useAuth();
     const [menuOpen, setMenuOpen] = useState(false);
+    const menuRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setMenuOpen(false);
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
 
     function avatarOnClick() {
         setMenuOpen(prev => !prev);
@@ -41,7 +56,7 @@ export default function DefaultLayout() {
             <div className="flex justify-end pr-4 py-2 z-10">
                 <NavigationMenu>
                     {user ? (
-                        <NavigationMenuItem className="md:block relative">
+                        <NavigationMenuItem className="md:block relative" ref={menuRef}>
                             <Avatar className="h-10 w-10 cursor-pointer hover:shadow-lg transition-shadow" onClick={avatarOnClick}>
                                 <AvatarImage src={user.profile_picture_url} />
                                 <AvatarFallback>{(user.name[0] + user.surname[0]).toUpperCase()}</AvatarFallback>
