@@ -13,7 +13,7 @@
 ## Installazione Dipendenze
 
 ```bash
-pip install fastapi uvicorn onnxruntime numpy pillow httpx
+pip install fastapi uvicorn onnxruntime numpy pillow httpx python-multipart
 ```
 
 ## Avvio dei Server
