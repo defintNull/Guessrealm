@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
         // php artisan migrate:fresh --seed
 
         // 1. CREAZIONE UTENTI REALI (Team + Prof)
-        
+
         // Andrea Luca Di Simone (id = 1)
         User::factory()->create([
             'name' => 'Andrea Luca',
@@ -67,12 +67,16 @@ class DatabaseSeeder extends Seeder
         // Creiamo altri 16 utenti random per avere circa 20 persone nel DB.
         // Questo permette al ChatSeeder di creare gruppi variati.
         User::factory(16)->create();
-
+        $names = ["Alessia", "Antonio","Elisa","Beatrice","Camilla","Stefano",
+                "Riccardo","Olivia","Giulia","Sara","Eva","Arianna",
+                "Luca","Davide","Umberto","Elia","Francesca","Ilaria",
+                "Veronica","Chiara","Alessandra","Bianca","Elena","Erica"];
 
         // 3. FOTO DEL GIOCO
         for ($i = 1; $i <= 24; $i++) {
             Photo::factory()->create([
-                'path' => sprintf('GamePhotos/%06d.jpg', $i)
+                'path' => sprintf('GamePhotos/%06d.jpg', $i),
+                'name' => $names[$i - 1] ?? 'Photo ' . $i,
             ]);
         }
 
