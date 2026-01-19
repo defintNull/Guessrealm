@@ -2,7 +2,7 @@ import { FacialAttributesClassifier } from "@/services/ai_bot/standalone";
 import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { useEcho } from "@laravel/echo-react";
+import { useEcho, useEchoPresence } from "@laravel/echo-react";
 import { useEnableLobby } from "@/context/LobbyProvider";
 import Questions from "@/services/Questions";
 import SideChat from "@/components/SideChat";
@@ -80,6 +80,8 @@ export default function MultiplayerGame() {
 
     // Chat
     const [ messages, setMessages ] = useState([]);
+    const [ typingUser, setTypingUser ] = useState(null);
+    const typingTimer = useRef(null);
 
     // Modals
     // Loading dialog state
@@ -230,7 +232,11 @@ export default function MultiplayerGame() {
     useEffect(() => {
         chatChannel()
         .listenForWhisper('typing', (e) => {
-            console.log(e.name);
+            if(e.state) {
+                setTypingUser(e.user);
+            } else {
+                setTypingUser(null);
+            }
         })
         .listenForWhisper('message', (e) => {
             setMessages((prev) => [
@@ -804,12 +810,42 @@ export default function MultiplayerGame() {
         });
     }
 
+    function handleTyping() {
+
+        chatChannel().whisper("typing", {
+            state: true,
+            user: user
+        });
+
+        // Reset timer precedente
+        if (typingTimer.current) {
+            clearTimeout(typingTimer.current);
+        }
+
+        // Timer di 3 secondi
+        typingTimer.current = setTimeout(() => {
+            // Invia typing: false
+            chatChannel().whisper("typing", {
+                state: false,
+                user: user
+            });
+
+            typingTimer.current = null;
+
+        }, 3000);
+    }
+
 
     return <div>
         <div className="flex flex-row h-[calc(100svh-100px)] pt-4">
             {/* Left Sidebar */}
             <div className="w-1/6 h-full">
-                <SideChat messages={messages} setMessages={sendMessageChat} />
+                <SideChat
+                    messages={messages}
+                    setMessages={sendMessageChat}
+                    typingUserUsername={typingUser?.username}
+                    handleTyping={handleTyping}
+                />
             </div>
             {/* Main body */}
             <div className="flex flex-col items-center justify-center gap-y-2 h-full w-2/3 px-4">

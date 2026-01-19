@@ -13,7 +13,7 @@ export default function SideChat({
     chatId = null,
     isOnline = false,
     typingUserUsername = null,
-    handleTyping,
+    handleTyping = () => {},
     enableColor = true,
     ...props
 }) {
