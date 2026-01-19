@@ -67,7 +67,6 @@ class ChatController extends Controller
             if($user->id == $request->user()->id) {
                 continue;
             }
-            echo $user->id;
             broadcast(new ChatEvent($user->id, $message->load('user')));
         }
 

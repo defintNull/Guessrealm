@@ -49,17 +49,7 @@ export default function Testchat() {
 
 
     // Websocket
-    useEcho(
-        'chat.' + user.id,
-        ['ChatEvent'],
-        (e) => {
-            if(selectedChatId == e.chat_id) {
-                setMessages(prev => [...prev, e.message]);
-            } else {
-                // PALLINO VERDE CHAT
-            }
-        }
-    );
+    const channel = window.Echo.private('chat.' + user.id);
 
     useEcho(
         'chat.' + user.id,
@@ -74,10 +64,22 @@ export default function Testchat() {
 
         setMessages([]);
 
-        return () => {
-            window.Echo.leave('chat.' + selectedChatId);
-        }
+        channel.listen(
+            'ChatEvent',
+            (e) => {
+                if(selectedChatId == e.chat_id) {
+                    setMessages(prev => [...prev, e.message]);
+                } else {
+                    // PALLINO VERDE CHAT
+                }
+            }
+        )
     }, [selectedChatId]);
+    useEffect(() => {
+        return () => {
+            window.Echo.leave('chat.' + user.id);
+        }
+    }, []);
 
 
     // 1. FETCH LISTA CHAT (Invariato)
