@@ -34,7 +34,7 @@ const getAvatarInitials = (entity) => {
     return "??";
 };
 
-export default function Testchat() {
+export default function Chat() {
     const { user } = useAuth();
 
     const [chats, setChats] = useState([]);

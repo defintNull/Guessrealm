@@ -14,11 +14,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuth } from "@/context/AuthProvider";
 import { Card } from "@/components/ui/card";
 import { Toaster, toast } from "sonner";
+import { IoChatbubbles, IoChatbubblesOutline } from "react-icons/io5";
 
 export default function DefaultLayout() {
     const navigate = useNavigate();
     const { user, setUser } = useAuth();
-    const [menuOpen, setMenuOpen] = useState(false);
+    const [ menuOpen, setMenuOpen ] = useState(false);
+    const [ chatHover, setChatHover ] = useState(false);
     const menuRef = useRef(null);
 
     useEffect(() => {
@@ -53,7 +55,20 @@ export default function DefaultLayout() {
     return (
         <div className="flex flex-col w-full min-h-svh py-4 px-8">
             <Toaster position="top-right" richColors />
-            <div className="flex justify-end pr-4 py-2 z-10">
+            <div className="flex justify-end items-center gap-x-5 pr-4 py-2 z-10">
+                {user && (
+                    <div onMouseOver={() => {setChatHover(true)}} onMouseOut={() => {setChatHover(false)}} className="flex flex-col items-center justify-center hover:cursor-pointer">
+                        {chatHover ? (
+                            <Link to="/chat" asChild >
+                                <IoChatbubbles className="h-9 w-9" />
+                            </Link>
+                        ) : (
+                            <Link to="/chat" asChild >
+                                <IoChatbubblesOutline className="h-9 w-9" />
+                            </Link>
+                        )}
+                    </div>
+                )}
                 <NavigationMenu>
                     {user ? (
                         <NavigationMenuItem className="md:block relative" ref={menuRef}>
