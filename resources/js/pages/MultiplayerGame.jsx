@@ -344,8 +344,6 @@ export default function MultiplayerGame() {
             setAskQuestionDialogState(true);
         } else if(gameState == 5) {
             // Close characters phase
-            setAskQuestionDialogState(false);
-            setContentAskQuestionDialog(null);
             setEnableForward(true);
             restartTimer();
             setQuestionResponse(websocketPayload?.response);
