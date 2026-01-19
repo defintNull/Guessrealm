@@ -26,13 +26,13 @@ class ChatController extends Controller
         return ChatResource::collection($chats);
     }
 
-    public function show(Chat $chat)
+    public function show(Request $request, Chat $chat)
     {
         Gate::authorize('view', $chat);
 
         // --- AGGIORNAMENTO LETTURA ---
         // Segniamo la chat come "letta" fino ad ora
-        $chat->users()->updateExistingPivot(auth()->id(), [
+        $chat->users()->updateExistingPivot($request->user()->id, [
             'last_read_at' => now()
         ]);
 
@@ -67,7 +67,7 @@ class ChatController extends Controller
             if($user->id == $request->user()->id) {
                 continue;
             }
-            broadcast(new ChatEvent($user->id, $chat->id, $message->load('user')));
+            broadcast(new ChatEvent($user->id, $message->load('user')));
         }
 
         return new MessageResource($message->load('user'));
@@ -80,8 +80,8 @@ class ChatController extends Controller
             'type' => 'required|string|in:private,group',
             'user_id' => 'required_if:type,private|exists:users,id',
             'name' => 'required_if:type,group|nullable|string|max:255',
-            'users' => 'required_if:type,group|array|min:1', 
-            'users.*' => 'exists:users,id' 
+            'users' => 'required_if:type,group|array|min:1',
+            'users.*' => 'exists:users,id'
         ]);
 
         $myId = $request->user()->id;
@@ -107,22 +107,21 @@ class ChatController extends Controller
 
             return DB::transaction(function () use ($myId, $otherUserId, $request) {
                 $chat = Chat::create(['type' => 'private']);
-                
+
                 // Attach con timestamp iniziali
                 $chat->users()->attach([
-                    $myId => ['last_read_at' => now()], 
+                    $myId => ['last_read_at' => now()],
                     $otherUserId => ['last_read_at' => now()] // Anche l'altro parte da "letto" (vuoto)
                 ]);
-                
+
                 $chat->load(['users', 'latestMessage']);
 
                 // Websocket Notifica Nuova Chat
                 $users = $chat->users;
                 foreach($users as $user) {
                     if($user->id == $request->user()->id) continue;
-                    // Trasformiamo la chat in risorsa JSON prima di inviarla
-                    $chatResource = new ChatResource($chat); 
-                    broadcast(new ChatGroupEvent($user->id, $chatResource->resolve()));
+
+                    broadcast(new ChatGroupEvent($user->id, $chat));
                 }
 
                 return new ChatResource($chat);
@@ -131,7 +130,7 @@ class ChatController extends Controller
 
         // --- CASO B: GRUPPO ---
         if ($type === 'group') {
-            return DB::transaction(function () use ($myId, $data) {
+            return DB::transaction(function () use ($myId, $data, $request) {
                 $chat = Chat::create([
                     'type' => 'group',
                     'name' => $data['name'],
@@ -143,7 +142,13 @@ class ChatController extends Controller
                 $pivotData = array_fill_keys($userIds, ['last_read_at' => now()]);
                 $chat->users()->attach($pivotData);
 
-                return new ChatResource($chat->load(['users', 'latestMessage']));
+                $chat->load(['users', 'latestMessage']);
+
+                foreach($userIds as $userId) {
+                    broadcast(new ChatGroupEvent($userId, $chat));
+                }
+
+                return new ChatResource($chat);
             });
         }
     }

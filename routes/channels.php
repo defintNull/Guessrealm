@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Chat;
+use App\Models\User;
 use App\Services\FakeRedis;
 use Illuminate\Support\Facades\Broadcast;
 
@@ -42,16 +43,20 @@ Broadcast::channel('game.{id}.chat', function ($user, $id) {
         );
 });
 
-// Canale Presence "online"
-// Questo canale serve solo a tracciare chi è connesso globalmente.
-Broadcast::channel('online', function ($user) {
-    if ($user) {
-        // Restituiamo i dati che vogliamo vedere nel frontend
-        return ['id' => $user->id, 'name' => $user->name];
-    }
-});
 
 Broadcast::channel('chat.{id}', function ($user, $id) {
     return $user->id == $id;
 });
 
+Broadcast::channel('chat.{chatId}.typing', function ($user, $chatId) {
+    return Chat::find($chatId)
+        ->users()
+        ->where('users.id', $user->id)
+        ->exists();
+});
+
+Broadcast::channel('chat_online', function (User $user) {
+    return [
+        'id' => $user->id
+    ];
+});

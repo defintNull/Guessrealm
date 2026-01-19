@@ -6,67 +6,33 @@ import { Textarea } from "./ui/textarea";
 import { useState, useEffect, useRef } from "react";
 import { SendIcon } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import echo from "@/echo";
 
 export default function SideChat({
     messages,
     setMessages,
-    // Rendiamo questi opzionali con valori di default sicuri
-    chatId = null, 
-    isOnline = false, 
+    chatId = null,
+    isOnline = false,
+    typingUserUsername = null,
+    handleTyping,
     enableColor = true,
     ...props
 }) {
     const { user } = useAuth();
     const scrollRef = useRef(null);
     const [inputValue, setInputValue] = useState("");
-    const [typingUser, setTypingUser] = useState(null);
     const typingTimeoutRef = useRef(null);
-
-    // --- 1. LOGICA WEBSOCKET (Solo se c'è chatId) ---
-    useEffect(() => {
-        // SE NON C'È CHAT ID (es. Bot), ESCI SUBITO.
-        // Questo evita errori "channel name must be a string"
-        if (!chatId) return;
-
-        const channel = echo.private(`chat.${chatId}`);
-
-        channel.listenForWhisper("typing", (e) => {
-            setTypingUser(e.name);
-            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-            typingTimeoutRef.current = setTimeout(() => {
-                setTypingUser(null);
-            }, 2000);
-        });
-
-        return () => {
-             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-             // Echo gestisce l'uscita automaticamente quando cambia il canale
-        };
-    }, [chatId]);
-
-    // --- 2. GESTIONE INVIO SEGNALE "TYPING" ---
-    const handleTyping = () => {
-        // Se è una chat col Bot (no ID), non mandare nulla
-        if (!chatId) return;
-
-        echo.private(`chat.${chatId}`).whisper("typing", {
-            name: user.username
-        });
-    };
 
     const sendMessage = async () => {
         const trimmedValue = inputValue.trim();
         if (!trimmedValue) return;
 
         setInputValue("");
-        setTypingUser(null);
 
         // Aggiungiamo il messaggio localmente
         setMessages((prev) => [
             ...prev,
             {
-                id: Date.now(),
+                id: prev.length ? prev[prev.length - 1].id + 1 : 1,
                 color: enableColor ? TextColor.GREEN : TextColor.GRAY,
                 content: trimmedValue,
                 user: {
@@ -91,7 +57,7 @@ export default function SideChat({
 
     const handleInputChange = (e) => {
         setInputValue(e.target.value);
-        handleTyping(); // Sicuro: controlla chatId dentro la funzione
+        handleTyping();
     };
 
     // Auto-scroll in basso
@@ -102,7 +68,7 @@ export default function SideChat({
         if (viewport) {
             viewport.scrollTop = viewport.scrollHeight;
         }
-    }, [messages, typingUser]);
+    }, [messages]);
 
     return (
         <Card {...props} className="h-full flex flex-col pb-2 overflow-hidden border-none shadow-none rounded-none">
@@ -147,16 +113,16 @@ export default function SideChat({
                 })}
 
                 {/* VISUALIZZAZIONE "STA SCRIVENDO" */}
-                {typingUser && (
+                {typingUserUsername && (
                     <div className="flex gap-3 mt-2 ml-1 text-xs text-muted-foreground italic animate-pulse">
-                        {typingUser} sta scrivendo...
+                        {typingUserUsername} sta scrivendo...
                     </div>
                 )}
             </ScrollArea>
 
             <div className="px-1 flex items-end gap-2 pt-2 border-t mt-1">
                 <Textarea
-                    className="resize-none flex-1 min-h-[40px] max-h-[100px]"
+                    className="resize-none flex-1 min-h-10 max-h-25"
                     onKeyDown={textareaSubmit}
                     onChange={handleInputChange}
                     value={inputValue}

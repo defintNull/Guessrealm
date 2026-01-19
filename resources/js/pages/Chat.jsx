@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import SideChat from "@/components/SideChat";
 import { useAuth } from "@/context/AuthProvider";
@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, MessageSquare, Loader2 } from "lucide-react";
 import NewChatDialog from "@/components/NewChatDialog";
 import NewGroupDialog from "@/components/NewGroupDialog";
-import echo from "@/echo"; 
+import { useEcho, useEchoPresence } from "@laravel/echo-react";
 
 // Funzione Helper
 const getAvatarInitials = (entity) => {
@@ -28,76 +28,111 @@ export default function Chat() {
 
     const [chats, setChats] = useState([]);
     const [isLoadingChats, setIsLoadingChats] = useState(true);
-    const [selectedChatId, setSelectedChatId] = useState(null);
+    const [selectedChat, setSelectedChat] = useState(null);
     const [messages, setMessages] = useState([]);
-    const [onlineUsers, setOnlineUsers] = useState([]);
+
+    const [ chatUsersOnlineId, setChatUsersOnlineId ] = useState([]);
+
+    const typingState = useRef(null);
+    const typingChannel = useRef(null);
+    const [ typingUser, setTypingUser ] = useState(null);
 
     const userInitials = getAvatarInitials(user);
 
-    // --- A. GESTIONE PRESENZE (Canale 'online') ---
+    // Websocket
+    const channel = window.Echo.private('chat.' + user.id);
     useEffect(() => {
-        // Unisciti al canale di presenza globale
-        const channel = echo.join('online');
-
-        channel
-            .here(users => setOnlineUsers(users.map(u => u.id)))
-            .joining(user => setOnlineUsers(prev => [...prev, user.id]))
-            .leaving(user => setOnlineUsers(prev => prev.filter(id => id !== user.id)));
-
-        return () => echo.leave('online');
+        return () => {
+            window.Echo.leave('chat.' + user.id);
+        }
     }, []);
 
-    // --- B. GESTIONE MESSAGGI REAL-TIME (Canale Utente) ---
-    useEffect(() => {
-        if (!user?.id) return;
-
-        // Ascoltiamo il canale privato dell'utente corrente
-        const channel = echo.private('chat.' + user.id);
-
-        // 1. Nuove chat create (es. qualcuno mi aggiunge a un gruppo)
-        channel.listen('ChatGroupEvent', (e) => {
+    useEcho(
+        'chat.' + user.id,
+        ['ChatGroupEvent'],
+        (e) => {
             setChats(prev => [e.chat, ...prev]);
-        });
+            setSelectedChat(e.chat);
+        }
+    );
 
-        // 2. Messaggi in arrivo
-        channel.listen('ChatEvent', (e) => {
-            // e.chat_id deve arrivare dal backend (vedi fix ChatEvent.php)
-            
-            if (selectedChatId === e.chat_id) {
-                // CASO A: La chat è APERTA -> Aggiungo messaggio alla lista messaggi
-                setMessages(prev => [...prev, e.message]);
-                
-                // Aggiorno comunque l'anteprima nella sidebar senza aumentare il contatore
-                setChats(prevChats => prevChats.map(chat => {
-                    if (chat.id === e.chat_id) {
-                        return {
-                            ...chat,
-                            latest_message: e.message,
-                            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                        };
-                    }
-                    return chat;
-                }));
+    useEffect(() => {
+        if (!selectedChat) return;
 
-                // Opzionale: Qui potresti chiamare axios per segnare subito come letto
+        setMessages([]);
+
+        channel.listen(
+            'ChatEvent',
+            (e) => {
+                if(selectedChat?.id == e.chat_id) {
+                    // Aggiornamento chat aperta
+                    setMessages(prev => [...prev, e.message]);
+                    // Aggiornamento anteprima messaggio chat
+                    setChats(prevChats => prevChats.map(chat => {
+                        if (chat.id === e.chat_id) {
+                            return {
+                                ...chat,
+                                latest_message: e.message,
+                                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            };
+                        }
+                        return chat;
+                    }));
+                } else {
+                    // Aggiornamento anteprima messaggio chat
+                    setChats(prevChats => prevChats.map(chat => {
+                        if (chat.id === e.chat_id) {
+                            return {
+                                ...chat,
+                                unread: (chat.unread || 0) + 1,
+                                latest_message: e.message,
+                                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                            };
+                        }
+                        return chat;
+                    }));
+                    // PALLINO VERDE CHAT
+                }
+            }
+        )
+
+        typingChannel.current = window.Echo.private('chat.' + selectedChat.id + '.typing');
+        typingChannel.current.listenForWhisper('typing', (e) => {
+            if(e.state) {
+                setTypingUser(e.user);
             } else {
-                // CASO B: La chat è CHIUSA (o ne sto guardando un'altra) -> Aumento UNREAD
-                setChats(prevChats => prevChats.map(chat => {
-                    if (chat.id === e.chat_id) {
-                        return {
-                            ...chat,
-                            unread: (chat.unread || 0) + 1, // INCREMENTO IL NUMERO ROSSO
-                            latest_message: e.message,
-                            time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-                        };
-                    }
-                    return chat;
-                }));
+                setTypingUser(null);
             }
         });
 
-        return () => echo.leave('chat.' + user.id);
-    }, [user.id, selectedChatId]); // Dipende da selectedChatId per sapere se la chat è aperta
+        return () => {
+            window.Echo.leave('chat.' + selectedChat.id + '.typing');
+        }
+    }, [selectedChat]);
+
+    useEffect(() => {
+        const channel = window.Echo.join('chat_online')
+            .here((users) => {
+                // users = array di utenti online
+                setChatUsersOnlineId(users.map(u => u.id));
+            })
+            .joining((user) => {
+                setChatUsersOnlineId(prev =>
+                    prev.includes(user.id) ? prev : [...prev, user.id]
+                );
+            })
+            .leaving((user) => {
+                setChatUsersOnlineId(prev =>
+                    prev.filter(id => id !== user.id)
+                );
+            });
+
+        return () => {
+            window.Echo.leave('chat_online');
+        };
+    }, []);
+
+
 
     // --- C. CARICAMENTO LISTA CHAT ---
     useEffect(() => {
@@ -107,7 +142,6 @@ export default function Chat() {
                 setChats(res.data.data);
                 setIsLoadingChats(false);
             } catch (error) {
-                console.error("Errore chat:", error);
                 setIsLoadingChats(false);
             }
         };
@@ -116,34 +150,30 @@ export default function Chat() {
 
     // --- D. APERTURA CHAT E CARICAMENTO MESSAGGI ---
     useEffect(() => {
-        if (!selectedChatId) return;
+        if (!selectedChat) return;
         const controller = new AbortController();
-        
+
         // 1. Pulisco i messaggi precedenti
-        setMessages([]); 
+        setMessages([]);
 
         // 2. Azzero visivamente il contatore "unread" per questa chat
-        setChats(prev => prev.map(c => c.id === selectedChatId ? { ...c, unread: 0 } : c));
+        setChats(prev => prev.map(c => c.id === selectedChat?.id ? { ...c, unread: 0 } : c));
 
         // 3. Scarico i messaggi (Il backend aggiornerà last_read_at nel DB automaticamente)
-        axios.get(`/spa/chats/${selectedChatId}`, { signal: controller.signal })
-            .then(res => setMessages(res.data.data))
-            .catch(err => { if (!axios.isCancel(err)) console.error(err); });
+        axios.get(`/spa/chats/${selectedChat?.id}`, { signal: controller.signal })
+            .then(res => setMessages(res.data.data));
 
         return () => controller.abort();
-    }, [selectedChatId]);
+    }, [selectedChat]);
 
 
     // --- LOGICA DI VISUALIZZAZIONE ---
-    const activeChatObj = chats.find((c) => c.id === selectedChatId);
-    
+    const activeChatObj = selectedChat;
+
     // Trova l'altro utente (safe navigation con || [])
-    const otherUser = activeChatObj?.type === 'private' 
+    const otherUser = activeChatObj?.type === 'private'
         ? (activeChatObj.users || []).find((u) => u.id !== user.id)
         : null;
-
-    // Calcola se è online
-    const isOnline = otherUser ? onlineUsers.includes(otherUser.id) : false;
 
     // Nome Header
     const activeChatName = activeChatObj
@@ -154,13 +184,15 @@ export default function Chat() {
                 : "Chat"
         : "Chat";
 
+    const isOnline = otherUser ? chatUsersOnlineId.includes(otherUser.id) : false;
+
     // --- HANDLERS ---
     const handleChatCreated = (chatObj) => {
-        setChats((prev) => {
-            if (prev.find((c) => c.id === chatObj.id)) return prev;
-            return [chatObj, ...prev];
-        });
-        setSelectedChatId(chatObj.id);
+        // setChats((prev) => {
+        //     if (prev.find((c) => c.id === chatObj.id)) return prev;
+        //     return [chatObj, ...prev];
+        // });
+        // setSelectedChat(chatObj);
     };
 
     function sendMessageChat(updater) {
@@ -169,19 +201,52 @@ export default function Chat() {
             const lastMsg = new_messages[new_messages.length - 1];
 
             // Invio al backend
-            axios.post('/spa/chats/' + selectedChatId, {
+            axios.post('/spa/chats/' + selectedChat?.id, {
                 content: lastMsg.content
             });
 
             // Aggiorno anteprima sidebar "localmente"
-            setChats(prev => prev.map(c => c.id === selectedChatId ? { 
-                ...c, 
+            setChats(prev => prev.map(c => c.id === selectedChat?.id ? {
+                ...c,
                 latest_message: lastMsg,
                 time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
             } : c));
 
             return new_messages;
         });
+    }
+
+    function handleTyping() {
+        if (!selectedChat?.users) return;
+
+        if(typingState.current == null) {
+            typingState.current = {
+                timeout: null,
+                channel: window.Echo.private('chat.' + selectedChat.id + '.typing')
+            }
+        }
+
+        typingState.current.channel.whisper("typing", {
+            state: true,
+            user: user
+        });
+
+        // Reset timer precedente
+        if (typingState.current.timeout) {
+            clearTimeout(typingState.current.timeout);
+        }
+
+        // Timer di 3 secondi
+        typingState.current.timeout = setTimeout(() => {
+            // Invia typing: false
+            typingState.current.channel.whisper("typing", {
+                state: false,
+                user: user
+            });
+
+            typingState.current = null;
+
+        }, 3000);
     }
 
     return (
@@ -230,16 +295,16 @@ export default function Chat() {
                                     if (other) {
                                         displayName = `${other.name} ${other.surname}`;
                                         avatar = other.profile_picture_url;
-                                        isChatUserOnline = onlineUsers.includes(other.id);
+                                        isChatUserOnline = chatUsersOnlineId.includes(other.id);
                                     }
                                 }
 
                                 return (
                                     <button
                                         key={chat.id}
-                                        onClick={() => setSelectedChatId(chat.id)}
+                                        onClick={() => setSelectedChat(chat)}
                                         className={`flex items-center gap-3 p-3 rounded-md text-left transition-all hover:bg-accent/50 ${
-                                            selectedChatId === chat.id ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                                            selectedChat?.id === chat.id ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                                         }`}
                                     >
                                         <div className="relative">
@@ -256,7 +321,7 @@ export default function Chat() {
                                         <div className="flex-1 overflow-hidden">
                                             {/* Riga 1: Nome e Orario */}
                                             <div className="flex justify-between items-baseline">
-                                                <span className={`text-sm font-medium truncate ${selectedChatId === chat.id ? "text-foreground" : ""}`}>
+                                                <span className={`text-sm font-medium truncate ${selectedChat?.id === chat.id ? "text-foreground" : ""}`}>
                                                     {displayName}
                                                 </span>
                                                 <span className="text-[10px] opacity-70">
@@ -270,7 +335,7 @@ export default function Chat() {
                                                 <p className={`text-xs truncate opacity-70 flex-1 ${chat.unread > 0 ? 'font-bold text-foreground' : ''}`}>
                                                     {chat.latest_message?.content || "Nessun messaggio"}
                                                 </p>
-                                                
+
                                                 {/* PALLINO ROSSO (MESSAGGI NON LETTI) */}
                                                 {chat.unread > 0 && (
                                                     <span className="bg-red-500 text-white text-[10px] h-5 min-w-5 px-1.5 flex items-center justify-center rounded-full ml-2 shadow-sm font-bold animate-in zoom-in">
@@ -289,7 +354,7 @@ export default function Chat() {
 
             {/* --- AREA CHAT --- */}
             <div className="flex-1 flex flex-col min-w-0 bg-background relative">
-                {selectedChatId ? (
+                {selectedChat ? (
                     <>
                         <div className="h-16 px-6 flex items-center justify-between border-b border-border shrink-0 bg-background/95 backdrop-blur">
                             <div>
@@ -310,11 +375,13 @@ export default function Chat() {
                                 messages={messages}
                                 setMessages={sendMessageChat}
                                 enableColor={false}
-                                
+
                                 // Prop essenziali
-                                chatId={selectedChatId} 
+                                chatId={selectedChat?.id}
                                 isOnline={isOnline}
-                                
+                                typingUserUsername={typingUser?.username}
+                                handleTyping={handleTyping}
+
                                 className="h-full border-none shadow-none rounded-none [&_.card-header]:hidden"
                             />
                         </div>
