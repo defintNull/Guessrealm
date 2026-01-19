@@ -7,7 +7,7 @@ import { useEnableLobby } from "@/context/LobbyProvider";
 import Questions from "@/services/Questions";
 import SideChat from "@/components/SideChat";
 import Photo from "@/components/Photo";
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Timer from "@/components/Timer";
 import { FaStar } from "react-icons/fa";
