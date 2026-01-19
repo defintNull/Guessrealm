@@ -860,7 +860,7 @@ export default function Singleplayer() {
                         <div className="flex-1 overflow-hidden">
                             <Photo
                                 src={photoSelected?.path}
-                                name={photoSelected?.name || ""}
+                                name={photoSelected?.data?.name || ""}
                                 className="h-full"
                             />
                         </div>
