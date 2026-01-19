@@ -18,7 +18,7 @@ import { LobbyMiddleware } from "./middlewares/LobbyMiddleware";
 import { MultiplayerGameProvider } from "@/context/MultiplayerGameProvider";
 import { MultiplayerGameMiddleware } from "./middlewares/MultiplayerGameMiddleware";
 import MultiplayerGame from "@/pages/MultiplayerGame";
-import Testchat from "@/pages/testChat";
+import Chat from "@/pages/Chat";
 
 
 const router = createBrowserRouter([
@@ -119,10 +119,10 @@ const router = createBrowserRouter([
                 )
             },
             {
-                path: "testchat",
+                path: "chat",
                 element : (
                     <AuthMiddleware>
-                        <Testchat />
+                        <Chat />
                     </AuthMiddleware>
                 )
             },

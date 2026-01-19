@@ -7,7 +7,7 @@ export const TextColor = Object.freeze({
 
 export default function ColoredText({ children, color, className="" }) {
   return (
-    <p className={color + " " + className}>
+    <p className={color + " " + className} style={{ overflowWrap: "anywhere" }}>
       {children}
     </p>
   );

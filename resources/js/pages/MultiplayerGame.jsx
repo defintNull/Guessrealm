@@ -7,7 +7,7 @@ import { useEnableLobby } from "@/context/LobbyProvider";
 import Questions from "@/services/Questions";
 import SideChat from "@/components/SideChat";
 import Photo from "@/components/Photo";
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import Timer from "@/components/Timer";
 import { FaStar } from "react-icons/fa";
@@ -344,8 +344,6 @@ export default function MultiplayerGame() {
             setAskQuestionDialogState(true);
         } else if(gameState == 5) {
             // Close characters phase
-            setAskQuestionDialogState(false);
-            setContentAskQuestionDialog(null);
             setEnableForward(true);
             restartTimer();
             setQuestionResponse(websocketPayload?.response);
@@ -848,30 +846,27 @@ export default function MultiplayerGame() {
                     >
                         <CommandList
                             className={
-                                "absolute w-full max-h-40 bg-slate-50 dark:bg-gray-900 rounded-t-xl z-20 bottom-full " +
+                                "absolute w-full max-h-42 bg-slate-50 dark:bg-gray-900 rounded-t-xl z-20 bottom-full " +
                                 (!commandVisibility ? "hidden" : "")
                             }
                         >
-                            <ScrollArea className="max-h-40">
-                                <CommandEmpty>
-                                    No question found!
-                                </CommandEmpty>
-                                {questions.map((el) => (
-                                    <CommandItem
-                                        className="cursor-pointer justify-between pr-2"
-                                        onSelect={() =>
-                                            commandClickHandle(el.id)
-                                        }
-                                        data-id={el.id}
-                                        key={el.id}
-                                    >
-                                        <p className={el.done ? "text-gray-500" : null}>{el.text}</p>
-                                        {(aiEnabled && aiHelp) && el.best ? (
-                                            <FaStar />
-                                        ) : null}
-                                    </CommandItem>
-                                ))}
-                            </ScrollArea>
+                            <CommandEmpty>No question found!</CommandEmpty>
+
+                            <CommandGroup>
+                                <ScrollArea className="h-40">
+                                    {questions.map((el) => (
+                                        <CommandItem
+                                            className="cursor-pointer justify-between pr-2"
+                                            onSelect={() => commandClickHandle(el.id)}
+                                            data-id={el.id}
+                                            key={el.id}
+                                        >
+                                            <p>{el.text}</p>
+                                            {aiHelp && el.best ? <FaStar /> : null}
+                                        </CommandItem>
+                                    ))}
+                                </ScrollArea>
+                            </CommandGroup>
                         </CommandList>
 
                         <div className="px-4">

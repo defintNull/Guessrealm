@@ -720,30 +720,27 @@ export default function Singleplayer() {
                         >
                             <CommandList
                                 className={
-                                    "absolute w-full max-h-40 bg-slate-50 dark:bg-gray-900 rounded-t-xl z-20 bottom-full " +
+                                    "absolute w-full max-h-42 bg-slate-50 dark:bg-gray-900 rounded-t-xl z-20 bottom-full " +
                                     (!commandVisibility ? "hidden" : "")
                                 }
                             >
-                                <ScrollArea className="max-h-40">
-                                    <CommandEmpty>
-                                        No question found!
-                                    </CommandEmpty>
-                                    {questions.map((el) => (
-                                        <CommandItem
-                                            className="cursor-pointer justify-between pr-2"
-                                            onSelect={() =>
-                                                commandClickHandle(el.id)
-                                            }
-                                            data-id={el.id}
-                                            key={el.id}
-                                        >
-                                            <p>{el.text}</p>
-                                            {aiHelp && el.best ? (
-                                                <FaStar />
-                                            ) : null}
-                                        </CommandItem>
-                                    ))}
-                                </ScrollArea>
+                                <CommandEmpty>No question found!</CommandEmpty>
+
+                                <CommandGroup>
+                                    <ScrollArea className="h-40">
+                                        {questions.map((el) => (
+                                            <CommandItem
+                                                className="cursor-pointer justify-between pr-2"
+                                                onSelect={() => commandClickHandle(el.id)}
+                                                data-id={el.id}
+                                                key={el.id}
+                                            >
+                                                <p>{el.text}</p>
+                                                {aiHelp && el.best ? <FaStar /> : null}
+                                            </CommandItem>
+                                        ))}
+                                    </ScrollArea>
+                                </CommandGroup>
                             </CommandList>
 
                             <div className="px-4">
@@ -863,7 +860,7 @@ export default function Singleplayer() {
                         <div className="flex-1 overflow-hidden">
                             <Photo
                                 src={photoSelected?.path}
-                                name={photoSelected?.name || ""}
+                                name={photoSelected?.data?.name || ""}
                                 className="h-full"
                             />
                         </div>

@@ -63,7 +63,7 @@ class User extends Authenticatable
         return Attribute::make(
             get: function () {
                 if ($this->profile_picture_path) {
-                    $baseURL = route('user.avatar', ['username' => $this->username]);
+                    $baseURL = route('spa.user.avatar', ['username' => $this->username]);
                     return $baseURL . "?v=" . $this->updated_at->timestamp;
                 }
                 return null;

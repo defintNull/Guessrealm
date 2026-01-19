@@ -104,8 +104,7 @@ class LobbyController extends Controller
                 $res["players"][] = [
                     "id" => $player["id"],
                     "username" => $user->username,
-                    "profile_picture_path" => $user->profile_picture_path,
-                    "profile_picture_mime" => $user->profile_picture_mime,
+                    "profile_picture_url" => $user->profile_picture_url,
                     "status" => $player["status"],
                 ];
             }
@@ -118,8 +117,7 @@ class LobbyController extends Controller
                 $res["players"][] = [
                     "id" => $player["id"],
                     "username" => $user->username,
-                    "profile_picture_path" => $user->profile_picture_path,
-                    "profile_picture_mime" => $user->profile_picture_mime,
+                    "profile_picture_url" => $user->profile_picture_url,
                     "status" => $player["status"],
                 ];
             }
@@ -257,7 +255,8 @@ class LobbyController extends Controller
                     'action' => 'JOIN',
                     'user' => $request->user()->only([
                         'id',
-                        'username'
+                        'username',
+                        'profile_picture_url'
                     ])
                 ];
                 broadcast(new LobbyEvent($request->id, $payload))->toOthers();

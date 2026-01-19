@@ -14,7 +14,7 @@ Route::get('/', function () {
     return view('App');
 });
 
-Route::get('avatar/{username}', [AuthController::class, 'profilePicture'])->name('user.avatar');
+
 
 Route::get('/checkUsername/{username}', [AuthController::class, 'checkUsername'])
     ->name('check_username');
@@ -36,31 +36,37 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
 
     Route::middleware('auth:web')->group(function () {
 
-        // 1. LISTA CHAT (Sidebar)
-        Route::get('/chats', [ChatController::class, 'index'])
-            ->name('chats.index');
+        Route::get('avatar/{username}', [AuthController::class, 'profilePicture'])
+            ->withoutMiddleware(SPAMiddleware::class)
+            ->name('user.avatar');
 
-        // 2. CREA NUOVA CHAT (Modale Ricerca)
-        // Chiama il metodo 'store' che non ha parametri {chat} nell'URL
-        Route::post('/chats', [ChatController::class, 'store'])
-            ->name('chats.create');
+        Route::group([], function () {
+            // 1. LISTA CHAT (Sidebar)
+            Route::get('/chats', [ChatController::class, 'index'])
+                ->name('chats.index');
 
-        // 3. LEGGI MESSAGGI (Chat aperta)
-        Route::get('/chats/{chat}', [ChatController::class, 'show'])
-            ->name('chats.show');
+            // 2. CREA NUOVA CHAT (Modale Ricerca)
+            // Chiama il metodo 'store' che non ha parametri {chat} nell'URL
+            Route::post('/chats', [ChatController::class, 'store'])
+                ->name('chats.create');
 
-        // 4. INVIA MESSAGGIO
-        // Chiama 'sendMessage' invece di 'store' (perché l'URL ha l'ID della chat)
-        Route::post('/chats/{chat}', [ChatController::class, 'sendMessage'])
-            ->name('chats.message.send');
+            // 3. LEGGI MESSAGGI (Chat aperta)
+            Route::get('/chats/{chat}', [ChatController::class, 'show'])
+                ->name('chats.show');
 
-        // 5. CERCA NEI MESSAGGI
-        Route::get('/chats/{chat}/search', [ChatController::class, 'search'])
-            ->name('chats.search');
+            // 4. INVIA MESSAGGIO
+            // Chiama 'sendMessage' invece di 'store' (perché l'URL ha l'ID della chat)
+            Route::post('/chats/{chat}', [ChatController::class, 'sendMessage'])
+                ->name('chats.message.send');
 
-        // 6. CERCA UTENTI (Per la modale nuova chat)
-        Route::get('/users', [UserController::class, 'index'])
-            ->name('users.search');
+            // 5. CERCA NEI MESSAGGI
+            Route::get('/chats/{chat}/search', [ChatController::class, 'search'])
+                ->name('chats.search');
+
+            // 6. CERCA UTENTI (Per la modale nuova chat)
+            Route::get('/users', [UserController::class, 'index'])
+                ->name('users.search');
+        });
 
         Route::get("/me", [AuthController::class, 'me'])
             ->name('me');

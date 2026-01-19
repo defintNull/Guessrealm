@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\ChatEvent;
+use App\Events\ChatGroupEvent;
 use App\Models\Chat;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -55,9 +57,18 @@ class ChatController extends Controller
         $data = $request->validate(['content' => 'required|string|max:2000']);
 
         $message = $chat->messages()->create([
-            'user_id' => auth()->id(),
+            'user_id' => $request->user()->id,
             'content' => $data['content'],
         ]);
+
+        // Websocket
+        $users = $chat->users;
+        foreach($users as $user) {
+            if($user->id == $request->user()->id) {
+                continue;
+            }
+            broadcast(new ChatEvent($user->id, $message->load('user')));
+        }
 
         return new MessageResource($message->load('user'));
     }
@@ -79,7 +90,7 @@ class ChatController extends Controller
             'users.*' => 'exists:users,id' // Ogni ID nell'array deve esistere
         ]);
 
-        $myId = auth()->id();
+        $myId = $request->user()->id;
         $type = $data['type'];
 
         // --- CASO A: CHAT PRIVATA ---
@@ -101,10 +112,21 @@ class ChatController extends Controller
             }
 
             // Transazione per creare chat + associare utenti
-            return DB::transaction(function () use ($myId, $otherUserId) {
+            return DB::transaction(function () use ($myId, $otherUserId, $request) {
                 $chat = Chat::create(['type' => 'private']);
                 $chat->users()->attach([$myId, $otherUserId]);
-                return new ChatResource($chat->load(['users', 'latestMessage']));
+                $chat->load(['users', 'latestMessage']);
+
+                // Websocket
+                $users = $chat->users;
+                foreach($users as $user) {
+                    if($user->id == $request->user()->id) {
+                        continue;
+                    }
+                    broadcast(new ChatGroupEvent($user->id, $chat));
+                }
+
+                return new ChatResource($chat);
             });
         }
 
@@ -114,7 +136,7 @@ class ChatController extends Controller
                 // 1. Creiamo la chat con il nome
                 $chat = Chat::create([
                     'type' => 'group',
-                    'name' => $data['name'], 
+                    'name' => $data['name'],
                 ]);
 
                 // 2. Prepariamo la lista utenti (Io + quelli selezionati)
