@@ -113,30 +113,81 @@ export class FacialAttributesClassifier {
 
 
   /**
-   * Carica il modello con supporto WebGPU
+   * Carica il modello con supporto WebGPU e Cache API
    * @param useWebGpu - Se true, tenta di usare WebGPU, altrimenti usa WASM
    * @param modelPath - Percorso personalizzato del modello (opzionale)
    */
-  async loadModel(useWebGpu: boolean = true, modelPath?: string, axios?: AxiosInstance): Promise<void> {
+async loadModel(useWebGpu: boolean = true, modelPath?: string, axios?: AxiosInstance): Promise<void> {
     const mPath = modelPath || CONFIG.modelPath;
+    const CACHE_NAME = 'ai-model-cache-v1';
 
     try {
-      // Configurazione delle opzioni di sessione
-      const sessionOptions: ort.InferenceSession.SessionOptions = {
-        executionProviders: [],
-        graphOptimizationLevel: 'all',
-      };
+        const sessionOptions: ort.InferenceSession.SessionOptions = {
+            executionProviders: [],
+            graphOptimizationLevel: 'all',
+        };
 
-        let modelResponse = null;
-        let modelBuffer = null;
+        let modelBuffer: ArrayBuffer;
 
+        // Prova SEMPRE a caricare dalla cache (se disponibile)
+        if ('caches' in window) {
+            try {
+                const cache = await caches.open(CACHE_NAME);
+                let cachedResponse = await cache.match(mPath);
 
-        if (axios) {
-            modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
-            modelBuffer = modelResponse.data;
+                if (cachedResponse) {
+                    // ✅ Trovato in cache!
+                    console.log('✅ Model loaded from cache!');
+                    modelBuffer = await cachedResponse.arrayBuffer();
+                } else {
+                    // ❌ Non in cache, scarica (con axios o fetch)
+                    console.log('📥 Downloading model (first time)...');
+
+                    if (axios) {
+                        // Scarica con axios
+                        const modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
+                        modelBuffer = modelResponse.data;
+
+                        // Salva in cache creando una Response da ArrayBuffer
+                        const blob = new Blob([modelBuffer]);
+                        const response = new Response(blob);
+                        await cache.put(mPath, response);
+                        console.log('💾 Model cached successfully (from axios)!');
+                    } else {
+                        // Scarica con fetch
+                        const response = await fetch(mPath);
+
+                        if (!response.ok) {
+                            throw new Error(`Failed to fetch model: ${response.status}`);
+                        }
+
+                        await cache.put(mPath, response.clone());
+                        console.log('💾 Model cached successfully (from fetch)!');
+
+                        modelBuffer = await response.arrayBuffer();
+                    }
+                }
+            } catch (cacheError) {
+                console.warn('⚠️  Cache error, falling back to direct download:', cacheError);
+
+                // Fallback senza cache
+                if (axios) {
+                    const modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
+                    modelBuffer = modelResponse.data;
+                } else {
+                    const response = await fetch(mPath);
+                    modelBuffer = await response.arrayBuffer();
+                }
+            }
         } else {
-            modelResponse = await fetch(mPath);
-            modelBuffer = await modelResponse.arrayBuffer();
+            // Browser non supporta Cache API
+            if (axios) {
+                const modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
+                modelBuffer = modelResponse.data;
+            } else {
+                const response = await fetch(mPath);
+                modelBuffer = await response.arrayBuffer();
+            }
         }
 
 
@@ -501,6 +552,32 @@ export class FacialAttributesClassifier {
    */
   public getExecutionProvider(): string {
     return this.executionProvider;
+  }
+
+  /**
+   * Pulisce la cache del modello (utile per aggiornamenti)
+   */
+  public static async clearModelCache(cacheName: string = 'ai-model-cache-v1'): Promise<void> {
+    if ('caches' in window) {
+      const deleted = await caches.delete(cacheName);
+      if (deleted) {
+        console.log(`🗑️  Cache "${cacheName}" cleared successfully`);
+      } else {
+        console.log(`ℹ️  Cache "${cacheName}" not found or already cleared`);
+      }
+    }
+  }
+
+  /**
+   * Verifica se il modello è presente in cache
+   */
+  public static async isModelCached(modelPath: string = CONFIG.modelPath, cacheName: string = 'ai-model-cache-v1'): Promise<boolean> {
+    if ('caches' in window) {
+      const cache = await caches.open(cacheName);
+      const response = await cache.match(modelPath);
+      return response !== undefined;
+    }
+    return false;
   }
 }
 
