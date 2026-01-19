@@ -27,7 +27,9 @@ class Chat extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class)->withTimestamps();
+        return $this->belongsToMany(User::class)
+            ->withPivot('last_read_at')
+            ->withTimestamps();
     }
 
     // Relazione ottimizzata per ottenere l'ultimo messaggio senza fare N+1 query pesanti
@@ -63,7 +65,7 @@ class Chat extends Model
     protected function isGroup(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->type === 'group'
+            get: fn() => $this->type === 'group'
         );
     }
 

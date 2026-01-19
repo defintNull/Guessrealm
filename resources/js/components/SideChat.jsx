@@ -1,34 +1,72 @@
 import { useAuth } from "@/context/AuthProvider";
 import ColoredText, { TextColor } from "./ColoredText";
-import { Card, CardHeader, CardTitle } from "./ui/card";
+import { Card } from "./ui/card";
 import { ScrollArea } from "./ui/scroll-area";
 import { Textarea } from "./ui/textarea";
 import { useState, useEffect, useRef } from "react";
-import axios from "axios";
 import { SendIcon } from "lucide-react";
-import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import echo from "@/echo";
 
 export default function SideChat({
     messages,
     setMessages,
+    // Rendiamo questi opzionali con valori di default sicuri
+    chatId = null, 
+    isOnline = false, 
     enableColor = true,
     ...props
 }) {
     const { user } = useAuth();
     const scrollRef = useRef(null);
     const [inputValue, setInputValue] = useState("");
+    const [typingUser, setTypingUser] = useState(null);
+    const typingTimeoutRef = useRef(null);
+
+    // --- 1. LOGICA WEBSOCKET (Solo se c'è chatId) ---
+    useEffect(() => {
+        // SE NON C'È CHAT ID (es. Bot), ESCI SUBITO.
+        // Questo evita errori "channel name must be a string"
+        if (!chatId) return;
+
+        const channel = echo.private(`chat.${chatId}`);
+
+        channel.listenForWhisper("typing", (e) => {
+            setTypingUser(e.name);
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            typingTimeoutRef.current = setTimeout(() => {
+                setTypingUser(null);
+            }, 2000);
+        });
+
+        return () => {
+             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+             // Echo gestisce l'uscita automaticamente quando cambia il canale
+        };
+    }, [chatId]);
+
+    // --- 2. GESTIONE INVIO SEGNALE "TYPING" ---
+    const handleTyping = () => {
+        // Se è una chat col Bot (no ID), non mandare nulla
+        if (!chatId) return;
+
+        echo.private(`chat.${chatId}`).whisper("typing", {
+            name: user.username
+        });
+    };
 
     const sendMessage = async () => {
         const trimmedValue = inputValue.trim();
         if (!trimmedValue) return;
 
         setInputValue("");
+        setTypingUser(null);
 
+        // Aggiungiamo il messaggio localmente
         setMessages((prev) => [
             ...prev,
             {
-                id: prev.length ? prev[prev.length - 1].id + 1 : 1,
+                id: Date.now(),
                 color: enableColor ? TextColor.GREEN : TextColor.GRAY,
                 content: trimmedValue,
                 user: {
@@ -53,8 +91,10 @@ export default function SideChat({
 
     const handleInputChange = (e) => {
         setInputValue(e.target.value);
+        handleTyping(); // Sicuro: controlla chatId dentro la funzione
     };
 
+    // Auto-scroll in basso
     useEffect(() => {
         const viewport = scrollRef.current?.querySelector(
             "[data-radix-scroll-area-viewport]"
@@ -62,61 +102,39 @@ export default function SideChat({
         if (viewport) {
             viewport.scrollTop = viewport.scrollHeight;
         }
-    }, [messages]);
+    }, [messages, typingUser]);
 
     return (
-        <Card {...props} className="h-full flex flex-col pb-2 overflow-hidden">
-            <CardHeader>
-                <CardTitle>Chat</CardTitle>
-            </CardHeader>
-
+        <Card {...props} className="h-full flex flex-col pb-2 overflow-hidden border-none shadow-none rounded-none">
             <ScrollArea
                 ref={scrollRef}
-                className="
-                    flex-1 h-0 px-4 overflow-x-hidden
-                    [&_[data-radix-scroll-area-viewport]>div]:min-w-0
-                    [&_[data-radix-scroll-area-viewport]>div]:max-w-full
-                "
+                className="flex-1 h-0 px-4 overflow-x-hidden [&_[data-radix-scroll-area-viewport]>div]:min-w-0 [&_[data-radix-scroll-area-viewport]>div]:max-w-full"
             >
                 {messages.map((msg, index) => {
-                    // Verifichiamo se il mittente è lo stesso del messaggio precedente
-
-                    const isSameUser =
-                        index > 0 &&
-                        messages[index - 1].user.id === msg.user.id;
+                    const isSameUser = index > 0 && messages[index - 1].user.id === msg.user.id;
 
                     return (
-                        <div
-                            key={msg.id}
-                            className={`flex gap-3 ${
-                                isSameUser ? "mt-0.5" : "mt-4"
-                            }`}
-                        >
-                            {/* L'Avatar lo mostriamo solo se l'utente NON è lo stesso del messaggio precedente */}
-                            <div className="w-8">
+                        <div key={msg.id} className={`flex gap-3 ${isSameUser ? "mt-0.5" : "mt-4"}`}>
+                            <div className="w-8 relative">
                                 {!isSameUser && (
-                                    <Avatar className="h-8 w-8">
-                                        <AvatarImage src={msg?.user?.avatar} />
-                                        <AvatarFallback>
-                                            {msg?.user?.username[0] || "S"}
-                                        </AvatarFallback>
-                                    </Avatar>
+                                    <>
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={msg?.user?.avatar} />
+                                            <AvatarFallback>{msg?.user?.username?.[0] || "?"}</AvatarFallback>
+                                        </Avatar>
+                                    </>
                                 )}
                             </div>
 
                             <div className="flex-1 min-w-0 flex flex-col">
-                                {/* Anche il nome lo mostriamo solo se è un "nuovo" blocco di messaggi */}
                                 {!isSameUser && (
                                     <div className="flex items-center justify-between text-[10px] mb-1">
                                         <span className="font-bold text-indigo-500 uppercase">
                                             {msg?.user?.username || "System"}
                                         </span>
-                                        <span className="text-muted-foreground">
-                                            {msg?.time || ""}
-                                        </span>
+                                        <span className="text-muted-foreground">{msg?.time || ""}</span>
                                     </div>
                                 )}
-
                                 <ColoredText
                                     color={msg?.color || TextColor.GRAY}
                                     className="w-full wrap-break-word whitespace-pre-wrap"
@@ -127,12 +145,18 @@ export default function SideChat({
                         </div>
                     );
                 })}
+
+                {/* VISUALIZZAZIONE "STA SCRIVENDO" */}
+                {typingUser && (
+                    <div className="flex gap-3 mt-2 ml-1 text-xs text-muted-foreground italic animate-pulse">
+                        {typingUser} sta scrivendo...
+                    </div>
+                )}
             </ScrollArea>
 
-            <div className="px-1 flex items-end gap-2">
+            <div className="px-1 flex items-end gap-2 pt-2 border-t mt-1">
                 <Textarea
-                    //ref={inputRef}
-                    className="resize-none flex-1"
+                    className="resize-none flex-1 min-h-[40px] max-h-[100px]"
                     onKeyDown={textareaSubmit}
                     onChange={handleInputChange}
                     value={inputValue}
@@ -141,9 +165,8 @@ export default function SideChat({
                 <button
                     type="button"
                     onClick={sendMessage}
-                    aria-label="Invia"
                     disabled={!inputValue.trim()}
-                    className="ml-2 h-10 w-10 hover:cursor-pointer rounded-full flex items-center justify-center bg-white dark:bg-black text-black dark:text-white hover:opacity-90 disabled:opacity-50 border border-gray-200 dark:border-gray-700"
+                    className="ml-2 h-10 w-10 rounded-full flex items-center justify-center bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50"
                 >
                     <SendIcon className="size-4" />
                 </button>

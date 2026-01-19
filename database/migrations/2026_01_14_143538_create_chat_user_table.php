@@ -16,6 +16,7 @@ return new class extends Migration
             $table->foreignId('chat_id')->constrained('chats')->onDelete('cascade');
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('role')->nullable();
+            $table->timestamp('last_read_at')->nullable();
             $table->timestamps();
 
             $table->unique(['chat_id', 'user_id']);

@@ -8,32 +8,43 @@ use Illuminate\Support\Str;
 
 class ChatResource extends JsonResource
 {
-    /**
-     * Transform the resource into an array.
-     *
-     * @return array<string, mixed>
-     */
     public function toArray(Request $request): array
     {
-        // Qui $this si riferisce all'oggetto Chat
+        // Recuperiamo la data "letto fino a..." dalla tabella pivot
+        $lastReadAt = $this->pivot->last_read_at ?? '1970-01-01 00:00:00';
+
+        // Contiamo quanti messaggi ci sono DOPO quella data (escludendo i miei)
+        $unreadCount = $this->messages()
+            ->where('created_at', '>', $lastReadAt)
+            ->where('user_id', '!=', $request->user()->id)
+            ->count();
+
         return [
             'id' => $this->id,
-            // Usiamo gli Accessor creati nel modello
+            'type' => $this->type,
+            
+            // Accessor del modello
             'name' => $this->display_name,
             'surname' => $this->display_surname,
             'avatar' => $this->display_avatar,
 
-            // Formattazione ultimo messaggio
+            // Formattazione messaggio sidebar
             'lastMessage' => $this->latestMessage
-                ? Str::limit($this->latestMessage->content, 30) // Laravel decrittografa in automatico qui!
+                ? Str::limit($this->latestMessage->content, 30)
                 : 'Nessun messaggio',
 
+            // Orario già formattato (Es. "17:30") -> Risolve il problema "Invalid Date"
             'time' => $this->latestMessage
                 ? $this->latestMessage->created_at->format('H:i')
                 : null,
 
-            // Se in futuro implementi 'unread_count' nel modello, lo mappi qui
-            'unread' => $this->unread_count ?? 0,
+            // Oggetto completo per aggiornamenti real-time
+            'latest_message' => new MessageResource($this->whenLoaded('latestMessage')),
+
+            // IL CONTEGGIO CALCOLATO QUI SOPRA
+            'unread' => $unreadCount, 
+
+            'users' => $this->whenLoaded('users'),
         ];
     }
 }

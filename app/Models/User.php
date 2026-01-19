@@ -78,6 +78,8 @@ class User extends Authenticatable
 
     public function chats(): BelongsToMany
     {
-        return $this->belongsToMany(\App\Models\Chat::class)->withTimestamps();
+        return $this->belongsToMany(\App\Models\Chat::class)
+            ->withPivot('last_read_at')
+            ->withTimestamps();
     }
 }

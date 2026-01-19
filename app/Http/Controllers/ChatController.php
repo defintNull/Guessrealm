@@ -14,10 +14,6 @@ use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
-    /**
-     * 1. INDEX: Restituisce la LISTA delle chat (Sidebar sinistra)
-     * Rotta: GET /api/chats
-     */
     public function index(Request $request)
     {
         $user = $request->user();
@@ -30,13 +26,15 @@ class ChatController extends Controller
         return ChatResource::collection($chats);
     }
 
-    /**
-     * 2. SHOW: Restituisce i MESSAGGI di una singola chat (Area destra)
-     * Rotta: GET /api/chats/{chat}
-     */
     public function show(Chat $chat)
     {
         Gate::authorize('view', $chat);
+
+        // --- AGGIORNAMENTO LETTURA ---
+        // Segniamo la chat come "letta" fino ad ora
+        $chat->users()->updateExistingPivot(auth()->id(), [
+            'last_read_at' => now()
+        ]);
 
         $messages = $chat->messages()
             ->with('user')
@@ -46,48 +44,44 @@ class ChatController extends Controller
         return MessageResource::collection($messages);
     }
 
-    /**
-     * 3. SEND MESSAGE: Invia un nuovo messaggio in una chat esistente
-     * Rotta: POST /api/chats/{chat}
-     */
     public function sendMessage(Request $request, Chat $chat)
     {
         Gate::authorize('view', $chat);
 
         $data = $request->validate(['content' => 'required|string|max:2000']);
 
+        // 1. Crea Messaggio
         $message = $chat->messages()->create([
             'user_id' => $request->user()->id,
             'content' => $data['content'],
         ]);
 
-        // Websocket
+        // 2. Aggiorna "last_read_at" per chi invia (così non conta come non letto per te)
+        $chat->users()->updateExistingPivot($request->user()->id, [
+            'last_read_at' => now()
+        ]);
+
+        // 3. Websocket
         $users = $chat->users;
         foreach($users as $user) {
             if($user->id == $request->user()->id) {
                 continue;
             }
-            broadcast(new ChatEvent($user->id, $message->load('user')));
+            broadcast(new ChatEvent($user->id, $chat->id, $message->load('user')));
         }
 
         return new MessageResource($message->load('user'));
     }
 
-    /**
-     * 4. STORE: Crea una NUOVA chat (privata o gruppo)
-     * Rotta: POST /api/chats
-     */
     public function store(Request $request)
     {
         // 1. Validazione intelligente
         $data = $request->validate([
             'type' => 'required|string|in:private,group',
-            // Se è privata, serve user_id singolo
             'user_id' => 'required_if:type,private|exists:users,id',
-            // Se è gruppo, serve name e un array di users
             'name' => 'required_if:type,group|nullable|string|max:255',
-            'users' => 'required_if:type,group|array|min:1', // Almeno 1 altro utente oltre a te
-            'users.*' => 'exists:users,id' // Ogni ID nell'array deve esistere
+            'users' => 'required_if:type,group|array|min:1', 
+            'users.*' => 'exists:users,id' 
         ]);
 
         $myId = $request->user()->id;
@@ -97,7 +91,7 @@ class ChatController extends Controller
         if ($type === 'private') {
             $otherUserId = $data['user_id'];
 
-            // Controllo Idempotenza (Se esiste già, ritornala)
+            // Controllo Idempotenza
             $existingChat = Chat::where('type', 'private')
                 ->whereHas('users', function ($q) use ($myId) {
                     $q->where('users.id', $myId);
@@ -111,19 +105,24 @@ class ChatController extends Controller
                 return new ChatResource($existingChat->load(['users', 'latestMessage']));
             }
 
-            // Transazione per creare chat + associare utenti
             return DB::transaction(function () use ($myId, $otherUserId, $request) {
                 $chat = Chat::create(['type' => 'private']);
-                $chat->users()->attach([$myId, $otherUserId]);
+                
+                // Attach con timestamp iniziali
+                $chat->users()->attach([
+                    $myId => ['last_read_at' => now()], 
+                    $otherUserId => ['last_read_at' => now()] // Anche l'altro parte da "letto" (vuoto)
+                ]);
+                
                 $chat->load(['users', 'latestMessage']);
 
-                // Websocket
+                // Websocket Notifica Nuova Chat
                 $users = $chat->users;
                 foreach($users as $user) {
-                    if($user->id == $request->user()->id) {
-                        continue;
-                    }
-                    broadcast(new ChatGroupEvent($user->id, $chat));
+                    if($user->id == $request->user()->id) continue;
+                    // Trasformiamo la chat in risorsa JSON prima di inviarla
+                    $chatResource = new ChatResource($chat); 
+                    broadcast(new ChatGroupEvent($user->id, $chatResource->resolve()));
                 }
 
                 return new ChatResource($chat);
@@ -133,28 +132,22 @@ class ChatController extends Controller
         // --- CASO B: GRUPPO ---
         if ($type === 'group') {
             return DB::transaction(function () use ($myId, $data) {
-                // 1. Creiamo la chat con il nome
                 $chat = Chat::create([
                     'type' => 'group',
                     'name' => $data['name'],
                 ]);
 
-                // 2. Prepariamo la lista utenti (Io + quelli selezionati)
-                // Usiamo array_unique per evitare duplicati se per sbaglio c'è il mio ID due volte
                 $userIds = array_unique(array_merge([$myId], $data['users']));
 
-                // 3. Alleghiamo tutti
-                $chat->users()->attach($userIds);
+                // Alleghiamo tutti inizializzando last_read_at
+                $pivotData = array_fill_keys($userIds, ['last_read_at' => now()]);
+                $chat->users()->attach($pivotData);
 
                 return new ChatResource($chat->load(['users', 'latestMessage']));
             });
         }
     }
 
-    /**
-     * 5. SEARCH: Cerca dentro una chat
-     * Rotta: GET /api/chats/{chat}/search
-     */
     public function search(Request $request, Chat $chat)
     {
         Gate::authorize('view', $chat);
