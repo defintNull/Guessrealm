@@ -25,10 +25,28 @@ import { Card } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthProvider";
 import useExitGamePage from "@/hooks/useExitGamePage";
 import { useEnableMultiplayerGame } from "@/context/MultiplayerGameProvider";
+import { useEnableCacheLoad } from "@/context/CacheProvider";
 
+function waitForEnableCacheLoad(getEnableCacheLoad) {
+    return new Promise(resolve => {
+        if (getEnableCacheLoad()) {
+            resolve();
+            return;
+        }
+
+        const interval = setInterval(() => {
+        if (getEnableCacheLoad()) {
+            clearInterval(interval);
+            resolve();
+        }
+        }, 50);
+    });
+}
 
 export default function MultiplayerGame() {
     const navigate = useNavigate();
+    const { enableCacheLoad } = useEnableCacheLoad();
+
     const { setEnableLobby } = useEnableLobby();
     const { setEnableMultiplayerGame } = useEnableMultiplayerGame();
     // state: {
@@ -160,6 +178,9 @@ export default function MultiplayerGame() {
             // AI MODEL CODE
             (async () => {
                 let aiModel = FacialAttributesClassifier.getInstance();
+
+                await waitForEnableCacheLoad(() => enableCacheLoad);
+
                 await aiModel.loadModel(
                     true, //CAMBIARE QUI PER ABILITARE WEBGPU
                     "/spa/ai/aimodel",

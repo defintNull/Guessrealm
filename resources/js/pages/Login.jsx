@@ -49,7 +49,6 @@ export default function Login() {
     async function onSubmit(values) {
 
         try {
-            await axios.get("/sanctum/csrf-cookie");
             let res = await axios.post("spa/login", values);
             setUser(res.data.user);
             navigate("/", { replace: true });

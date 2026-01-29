@@ -69,10 +69,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import Timer from "@/components/Timer";
 import { FacialAttributesClassifier } from "@/services/ai_bot/standalone";
 import { id } from "zod/v4/locales";
+import { useEnableCacheLoad } from "@/context/CacheProvider";
+
+function waitForEnableCacheLoad(getEnableCacheLoad) {
+    return new Promise(resolve => {
+        if (getEnableCacheLoad()) {
+            resolve();
+            return;
+        }
+
+        const interval = setInterval(() => {
+        if (getEnableCacheLoad()) {
+            clearInterval(interval);
+            resolve();
+        }
+        }, 50);
+    });
+}
 
 export default function Singleplayer() {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { enableCacheLoad } = useEnableCacheLoad();
+
     // Game states
     const [gameState, setGameState] = useState(0);
     const [photos, setPhotos] = useState([]);
@@ -182,6 +201,9 @@ export default function Singleplayer() {
             // AI MODEL CODE
             (async () => {
                 let aiModel = FacialAttributesClassifier.getInstance();
+
+                await waitForEnableCacheLoad(() => enableCacheLoad);
+
                 await aiModel.loadModel(
                     true, //CAMBIARE QUI PER ABILITARE WEBGPU
                     "/spa/ai/aimodel",

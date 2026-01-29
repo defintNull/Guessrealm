@@ -111,66 +111,75 @@ export class FacialAttributesClassifier {
         return FacialAttributesClassifier.instance;
     }
 
+    /**
+     * Carica il modello con supporto WebGPU e Cache API
+     * @param useWebGpu - Se true, tenta di usare WebGPU, altrimenti usa WASM
+     * @param modelPath - Percorso personalizzato del modello (opzionale)
+     */
+    async loadModel(useWebGpu: boolean = true, modelPath?: string, axios?: AxiosInstance): Promise<void> {
+        const mPath = modelPath || CONFIG.modelPath;
+        const CACHE_NAME = 'ai-model-cache-v1';
 
-  /**
-   * Carica il modello con supporto WebGPU e Cache API
-   * @param useWebGpu - Se true, tenta di usare WebGPU, altrimenti usa WASM
-   * @param modelPath - Percorso personalizzato del modello (opzionale)
-   */
-async loadModel(useWebGpu: boolean = true, modelPath?: string, axios?: AxiosInstance): Promise<void> {
-    const mPath = modelPath || CONFIG.modelPath;
-    const CACHE_NAME = 'ai-model-cache-v1';
+        try {
+            const sessionOptions: ort.InferenceSession.SessionOptions = {
+                executionProviders: [],
+                graphOptimizationLevel: 'all',
+            };
 
-    try {
-        const sessionOptions: ort.InferenceSession.SessionOptions = {
-            executionProviders: [],
-            graphOptimizationLevel: 'all',
-        };
+            let modelBuffer: ArrayBuffer;
 
-        let modelBuffer: ArrayBuffer;
+            // Prova SEMPRE a caricare dalla cache (se disponibile)
+            if ('caches' in window) {
+                try {
+                    const cache = await caches.open(CACHE_NAME);
+                    let cachedResponse = await cache.match(mPath);
 
-        // Prova SEMPRE a caricare dalla cache (se disponibile)
-        if ('caches' in window) {
-            try {
-                const cache = await caches.open(CACHE_NAME);
-                let cachedResponse = await cache.match(mPath);
+                    if (cachedResponse) {
+                        // ✅ Trovato in cache!
+                        console.log('✅ Model loaded from cache!');
+                        modelBuffer = await cachedResponse.arrayBuffer();
+                    } else {
+                        // ❌ Non in cache, scarica (con axios o fetch)
+                        console.log('📥 Downloading model (first time)...');
 
-                if (cachedResponse) {
-                    // ✅ Trovato in cache!
-                    console.log('✅ Model loaded from cache!');
-                    modelBuffer = await cachedResponse.arrayBuffer();
-                } else {
-                    // ❌ Non in cache, scarica (con axios o fetch)
-                    console.log('📥 Downloading model (first time)...');
+                        if (axios) {
+                            // Scarica con axios
+                            const modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
+                            modelBuffer = modelResponse.data;
 
+                            // Salva in cache creando una Response da ArrayBuffer
+                            const blob = new Blob([modelBuffer]);
+                            const response = new Response(blob);
+                            await cache.put(mPath, response);
+                            console.log('💾 Model cached successfully (from axios)!');
+                        } else {
+                            // Scarica con fetch
+                            const response = await fetch(mPath);
+
+                            if (!response.ok) {
+                                throw new Error(`Failed to fetch model: ${response.status}`);
+                            }
+
+                            await cache.put(mPath, response.clone());
+                            console.log('💾 Model cached successfully (from fetch)!');
+
+                            modelBuffer = await response.arrayBuffer();
+                        }
+                    }
+                } catch (cacheError) {
+                    console.warn('⚠️  Cache error, falling back to direct download:', cacheError);
+
+                    // Fallback senza cache
                     if (axios) {
-                        // Scarica con axios
                         const modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
                         modelBuffer = modelResponse.data;
-
-                        // Salva in cache creando una Response da ArrayBuffer
-                        const blob = new Blob([modelBuffer]);
-                        const response = new Response(blob);
-                        await cache.put(mPath, response);
-                        console.log('💾 Model cached successfully (from axios)!');
                     } else {
-                        // Scarica con fetch
                         const response = await fetch(mPath);
-
-                        if (!response.ok) {
-                            throw new Error(`Failed to fetch model: ${response.status}`);
-                        }
-
-                        await cache.put(mPath, response.clone());
-                        console.log('💾 Model cached successfully (from fetch)!');
-
                         modelBuffer = await response.arrayBuffer();
                     }
                 }
-            } catch (cacheError) {
-                console.warn('⚠️  Cache error, falling back to direct download:', cacheError);
-
-                // Fallback senza cache
+            } else {
+                // Browser non supporta Cache API
                 if (axios) {
                     const modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
                     modelBuffer = modelResponse.data;
@@ -179,60 +188,50 @@ async loadModel(useWebGpu: boolean = true, modelPath?: string, axios?: AxiosInst
                     modelBuffer = await response.arrayBuffer();
                 }
             }
-        } else {
-            // Browser non supporta Cache API
-            if (axios) {
-                const modelResponse = await axios.get(mPath, { responseType: "arraybuffer" });
-                modelBuffer = modelResponse.data;
-            } else {
-                const response = await fetch(mPath);
-                modelBuffer = await response.arrayBuffer();
+
+
+
+        // Determina quale execution provider utilizzare
+        if (useWebGpu) {
+            // Verifica supporto WebGPU
+            if ('gpu' in navigator) {
+            try {
+                const adapter = await (navigator as any).gpu.requestAdapter();
+                if (adapter) {
+                console.log('✅ WebGPU supported, attempting to use it...');
+                sessionOptions.executionProviders = ['webgpu'];
+                } else {
+                console.warn('⚠️  WebGPU not available, falling back to WASM');
+                sessionOptions.executionProviders = ['wasm'];
+                }
+            } catch (err) {
+                console.warn('⚠️  WebGPU check failed, using WASM:', err);
+                sessionOptions.executionProviders = ['wasm'];
             }
-        }
-
-
-
-      // Determina quale execution provider utilizzare
-      if (useWebGpu) {
-        // Verifica supporto WebGPU
-        if ('gpu' in navigator) {
-          try {
-            const adapter = await (navigator as any).gpu.requestAdapter();
-            if (adapter) {
-              console.log('✅ WebGPU supported, attempting to use it...');
-              sessionOptions.executionProviders = ['webgpu'];
             } else {
-              console.warn('⚠️  WebGPU not available, falling back to WASM');
-              sessionOptions.executionProviders = ['wasm'];
-            }
-          } catch (err) {
-            console.warn('⚠️  WebGPU check failed, using WASM:', err);
+            console.warn('⚠️  WebGPU not supported by browser, using WASM');
             sessionOptions.executionProviders = ['wasm'];
-          }
+            }
         } else {
-          console.warn('⚠️  WebGPU not supported by browser, using WASM');
-          sessionOptions.executionProviders = ['wasm'];
+            console.log('🔄 Using WASM (CPU) as requested');
+            sessionOptions.executionProviders = ['wasm'];
         }
-      } else {
-        console.log('🔄 Using WASM (CPU) as requested');
-        sessionOptions.executionProviders = ['wasm'];
-      }
 
-      // Crea la sessione
-      this.session = await ort.InferenceSession.create(modelBuffer, sessionOptions);
+        // Crea la sessione
+        this.session = await ort.InferenceSession.create(modelBuffer, sessionOptions);
 
-      // Verifica quale provider è stato effettivamente utilizzato
-      this.executionProvider = (this.session as any).handler?._ep ||
-                              sessionOptions.executionProviders[0] ||
-                              'unknown';
+        // Verifica quale provider è stato effettivamente utilizzato
+        this.executionProvider = (this.session as any).handler?._ep ||
+                                sessionOptions.executionProviders[0] ||
+                                'unknown';
 
-      console.log('✅ Model loaded successfully');
-      console.log(`🎮 Execution provider: ${this.executionProvider}`);
+        console.log('✅ Model loaded successfully');
+        console.log(`🎮 Execution provider: ${this.executionProvider}`);
 
-    } catch (error) {
-      throw new Error(`Failed to load model: ${error}`);
+        } catch (error) {
+        throw new Error(`Failed to load model: ${error}`);
+        }
     }
-  }
 
   /**
    * Pre-processa un'immagine 256x256 per il modello
