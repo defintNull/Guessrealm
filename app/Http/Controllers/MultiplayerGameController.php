@@ -403,23 +403,33 @@ class MultiplayerGameController extends Controller
 
                     $result = Redis::hget("game:$request->id:player1", "guess_character") == Redis::hget("game:$request->id:player2", "character");
 
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
+                    $player1_id = Redis::hget("game:$request->id:player1", "id");
+                    broadcast(new GameEvent($request->id, $player1_id, 13, [
                         'end' => $result,
                     ]));
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
+                    StatisticsController::update($player1_id, $result);
+
+                    $player2_id = Redis::hget("game:$request->id:player2", "id");
+                    broadcast(new GameEvent($request->id, $player2_id, 13, [
                         'end' => !$result
                     ]));
+                    StatisticsController::update($player2_id, !$result);
                 } elseif($game_state == 12 && $request->user()->id == Redis::hget("game:$request->id:player1", 'id')) {
                     Redis::hset("game:$request->id", "game_state", 13);
 
                     $result = Redis::hget("game:$request->id:player2", "guess_character") == Redis::hget("game:$request->id:player1", "character");
 
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
+                    $player1_id = Redis::hget("game:$request->id:player1", "id");
+                    broadcast(new GameEvent($request->id, $player1_id, 13, [
                         'end' => !$result,
                     ]));
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
+                    StatisticsController::update($player1_id, !$result);
+
+                    $player2_id = Redis::hget("game:$request->id:player2", "id");
+                    broadcast(new GameEvent($request->id, $player2_id, 13, [
                         'end' => $result
                     ]));
+                    StatisticsController::update($player2_id, $result);
                 }
 
                 $keys = Redis::keys("game:$request->id*");
@@ -446,21 +456,31 @@ class MultiplayerGameController extends Controller
                 if(in_array($game_state, [7, 9, 12]) || ($game_state == 2 && Redis::hget("game:$request->id:player1", "character") == 0)) {
                     Redis::hset("game:$request->id", "game_state", 13);
 
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
+                    $player1_id = Redis::hget("game:$request->id:player1", "id");
+                    broadcast(new GameEvent($request->id, $player1_id, 13, [
                         'end' => false,
                     ]));
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
+                    StatisticsController::update($player1_id, false);
+
+                    $player2_id = Redis::hget("game:$request->id:player2", "id");
+                    broadcast(new GameEvent($request->id, $player2_id, 13, [
                         'end' => true,
                     ]));
+                    StatisticsController::update($player2_id, true);
                 } elseif(in_array($game_state, [4, 10, 11]) || ($game_state == 2 && Redis::hget("game:$request->id:player2", "character") == 0)) {
                     Redis::hset("game:$request->id", "game_state", 13);
 
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
+                    $player1_id = Redis::hget("game:$request->id:player1", "id");
+                    broadcast(new GameEvent($request->id, $player1_id, 13, [
                         'end' => true,
                     ]));
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
+                    StatisticsController::update($player1_id, true);
+
+                    $player2_id = Redis::hget("game:$request->id:player2", "id");
+                    broadcast(new GameEvent($request->id, $player2_id, 13, [
                         'end' => false,
                     ]));
+                    StatisticsController::update($player2_id, false);
                 }
             }
         });
@@ -505,12 +525,17 @@ class MultiplayerGameController extends Controller
 
                     $result = Redis::hget("game:$request->id:player1", "id") == $request->user()->id;
 
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
+                    $player1_id = Redis::hget("game:$request->id:player1", "id");
+                    broadcast(new GameEvent($request->id, $player1_id, 13, [
                         'end' => !$result,
                     ]));
-                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
+                    !$result ? StatisticsController::update($player1_id, !$result) : null;
+
+                    $player2_id = Redis::hget("game:$request->id:player2", "id");
+                    broadcast(new GameEvent($request->id, $player2_id, 13, [
                         'end' => $result
                     ]));
+                    $result ? StatisticsController::update($player2_id, $result) : null;
 
                     $keys = Redis::keys("game:$request->id*");
                     foreach ($keys as $key) {

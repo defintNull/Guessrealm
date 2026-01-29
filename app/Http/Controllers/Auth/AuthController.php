@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Statistic;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -95,6 +96,14 @@ class AuthController extends Controller
         }
 
         $user = User::create($user_data);
+        Statistic::create([
+            'games' => 0,
+            'wins' => 0,
+            'loses' => 0,
+            'level' => 0,
+            'xp' => 0,
+            'user_id' => $user->id
+        ]);
 
         return response()->json([
             'status' => 'OK',

@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class User extends Authenticatable
 {
@@ -81,5 +82,12 @@ class User extends Authenticatable
         return $this->belongsToMany(\App\Models\Chat::class)
             ->withPivot('last_read_at')
             ->withTimestamps();
+    }
+
+    /**
+     * Get the statistic associated with the user.
+     */
+    public function statistic() : HasOne {
+        return $this->hasOne(Statistic::class);
     }
 }

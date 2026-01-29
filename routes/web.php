@@ -8,6 +8,7 @@ use App\Http\Middleware\SPAMiddleware;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\MultiplayerGameController;
+use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
@@ -88,6 +89,14 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
         Route::post('/profileUpdate', [AuthController::class, 'update'])
             ->name('profile_update');
 
+        Route::name('statistics.')->prefix('statistics')->group(function() {
+            Route::post('show', [StatisticsController::class, 'show'])
+                ->name('show');
+
+            Route::get('leaderboard', [StatisticsController::class, 'index'])
+                ->name('leaderboard');
+        });
+
         Route::name('game.')->prefix('game')->group(function () {
             Route::post('photos', [PhotoController::class, 'index'])
                 ->name('photos');
@@ -105,8 +114,8 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             Route::get('aimodel', [AiController::class, 'getModel'])
                 ->name('getModel');
 
-            Route::get('aidatamodel', [AiController::class, 'getDataModel'])
-                ->name('getDataModel');
+            // Route::get('aidatamodel', [AiController::class, 'getDataModel'])
+            //     ->name('getDataModel');
         });
 
         Route::name('lobby.')->prefix('lobby')->group(function () {

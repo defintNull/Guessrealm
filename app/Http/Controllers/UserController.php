@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -16,7 +17,7 @@ class UserController extends Controller
             return response()->json([]);
         }
 
-        $users = User::where('id', '!=', auth()->id()) // Escludiamo noi stessi
+        $users = User::where('id', '!=', Auth::user()->id) // Escludiamo noi stessi
             ->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
