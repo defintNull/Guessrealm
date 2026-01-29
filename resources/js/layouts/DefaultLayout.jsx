@@ -59,11 +59,11 @@ export default function DefaultLayout() {
                 {user && (
                     <div onMouseOver={() => {setChatHover(true)}} onMouseOut={() => {setChatHover(false)}} className="flex flex-col items-center justify-center hover:cursor-pointer">
                         {chatHover ? (
-                            <Link to="/chat" asChild >
+                            <Link to="/chat" >
                                 <IoChatbubbles className="h-8 w-8" />
                             </Link>
                         ) : (
-                            <Link to="/chat" asChild >
+                            <Link to="/chat" >
                                 <IoChatbubblesOutline className="h-8 w-8" />
                             </Link>
                         )}

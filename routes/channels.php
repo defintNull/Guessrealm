@@ -2,44 +2,44 @@
 
 use App\Models\Chat;
 use App\Models\User;
-use App\Services\FakeRedis;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Redis;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
     return (int) $user->id === (int) $id;
 });
 
 Broadcast::channel('lobby.{id}', function ($user, $id) {
-    if (!FakeRedis::exists("lobby:$id")) {
+    if (!Redis::exists("lobby:$id")) {
         return false;
     }
 
     return
-        FakeRedis::hget("lobby:$id:player1", "id") == $user->id ||
-        FakeRedis::hget("lobby:$id:player2", "id") == $user->id;
+        Redis::hget("lobby:$id:player1", "id") == $user->id ||
+        Redis::hget("lobby:$id:player2", "id") == $user->id;
 });
 
 Broadcast::channel('game.{id}.player.{player_id}', function ($user, $id, $player_id) {
-    if (!FakeRedis::exists("game:$id")) {
+    if (!Redis::exists("game:$id")) {
         return false;
     }
 
     return
         $user->id == $player_id &&
         (
-            FakeRedis::hget("game:$id:player1", "id") == $player_id ||
-            FakeRedis::hget("game:$id:player2", "id") == $player_id
+            Redis::hget("game:$id:player1", "id") == $player_id ||
+            Redis::hget("game:$id:player2", "id") == $player_id
         );
 });
 
 Broadcast::channel('game.{id}.chat', function ($user, $id) {
-    if (!FakeRedis::exists("game:$id")) {
+    if (!Redis::exists("game:$id")) {
         return false;
     }
 
     return (
-            FakeRedis::hget("game:$id:player1", "id") == $user->id ||
-            FakeRedis::hget("game:$id:player2", "id") == $user->id
+            Redis::hget("game:$id:player1", "id") == $user->id ||
+            Redis::hget("game:$id:player2", "id") == $user->id
         );
 });
 

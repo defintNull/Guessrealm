@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Events\LobbyEvent;
 use App\Models\User;
-use App\Services\FakeRedis;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -39,16 +39,16 @@ class LobbyController extends Controller
             'name' => ['nullable', 'string'],
         ]);
 
-        $lobbies = FakeRedis::smembers('lobbies');
+        $lobbies = Redis::smembers('lobbies');
         $result = [];
 
         foreach ($lobbies as $id) {
-            $data = FakeRedis::hgetall("lobby:$id");
+            $data = Redis::hgetall("lobby:$id");
 
             $condition = !$request->has('visibility') ||
                         $request->visibility == 0 ||
                         $request->visibility - 1 == $data['visibility'];
-            if (!empty($data) && !FakeRedis::exists("lobby:$id:player2") && $condition && (!$request->has('name') || str_starts_with($data['name'], $request->name))) {
+            if (!empty($data) && !Redis::exists("lobby:$id:player2") && $condition && (!$request->has('name') || str_starts_with($data['name'], $request->name))) {
                 $result[] = [
                     'id' => (int) $data['id'],
                     'name' => $data['name'],
@@ -77,16 +77,16 @@ class LobbyController extends Controller
             $userId = $request->user()->id;
 
             // Controllo accesso
-            $isPlayer1 = FakeRedis::hget("lobby:$lobbyId:player1", 'id') == $userId;
-            $isPlayer2 = FakeRedis::exists("lobby:$lobbyId:player2") && FakeRedis::hget("lobby:$lobbyId:player2", 'id') == $userId;
+            $isPlayer1 = Redis::hget("lobby:$lobbyId:player1", 'id') == $userId;
+            $isPlayer2 = Redis::exists("lobby:$lobbyId:player2") && Redis::hget("lobby:$lobbyId:player2", 'id') == $userId;
 
-            if (!FakeRedis::exists("lobby:$lobbyId") || (!$isPlayer1 && !$isPlayer2)) {
+            if (!Redis::exists("lobby:$lobbyId") || (!$isPlayer1 && !$isPlayer2)) {
                 $status = false;
                 return;
             }
 
             // Lobby
-            $lobby = FakeRedis::hgetall("lobby:$lobbyId");
+            $lobby = Redis::hgetall("lobby:$lobbyId");
 
             $res = [
                 "id" => $lobby["id"],
@@ -97,8 +97,8 @@ class LobbyController extends Controller
             ];
 
             // Player 1
-            if (FakeRedis::exists("lobby:$lobbyId:player1")) {
-                $player = FakeRedis::hgetall("lobby:$lobbyId:player1");
+            if (Redis::exists("lobby:$lobbyId:player1")) {
+                $player = Redis::hgetall("lobby:$lobbyId:player1");
                 $user = User::find($player["id"]);
 
                 $res["players"][] = [
@@ -110,8 +110,8 @@ class LobbyController extends Controller
             }
 
             // Player 2
-            if (FakeRedis::exists("lobby:$lobbyId:player2")) {
-                $player = FakeRedis::hgetall("lobby:$lobbyId:player2");
+            if (Redis::exists("lobby:$lobbyId:player2")) {
+                $player = Redis::hgetall("lobby:$lobbyId:player2");
                 $user = User::find($player["id"]);
 
                 $res["players"][] = [
@@ -131,16 +131,16 @@ class LobbyController extends Controller
 
     public function timer(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('lobbies'))]
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))]
         ]);
 
         Cache::lock("lobby_$request->id", 5)->get(function() use($request) {
-            if(FakeRedis::exists("lobby:$request->id")) {
-                $keys = FakeRedis::keys("lobby:$request->id*");
+            if(Redis::exists("lobby:$request->id")) {
+                $keys = Redis::keys("lobby:$request->id*");
                 foreach ($keys as $key) {
-                    FakeRedis::del($key);
+                    Redis::del($key);
                 }
-                FakeRedis::srem("lobbies", $request->id);
+                Redis::srem("lobbies", $request->id);
             }
         });
 
@@ -173,7 +173,7 @@ class LobbyController extends Controller
         $code = Str::upper(Str::random(8));
         $name = $this->generateLobbyName();
         Cache::lock('lobby_create', 5)->get(function() use(&$id, $code, $name ,$request) {
-            $ids = FakeRedis::smembers('lobbies');
+            $ids = Redis::smembers('lobbies');
 
             $id = 0;
             while(in_array($id, $ids)) {
@@ -181,17 +181,17 @@ class LobbyController extends Controller
             }
 
             // Creating lobby
-            FakeRedis::hset("lobby:$id", "id", $id);
-            FakeRedis::hset("lobby:$id", "name", $name);
-            FakeRedis::hset("lobby:$id", "code", $code);
-            FakeRedis::hset("lobby:$id", "visibility", $request->lobby_visibility);
-            FakeRedis::hset("lobby:$id", "aihelp", $request->ai_help ? 1 : 0);
-            FakeRedis::hset("lobby:$id", "timeout", 60*$request->timeout);
-            FakeRedis::sadd("lobbies", $id);
+            Redis::hset("lobby:$id", "id", $id);
+            Redis::hset("lobby:$id", "name", $name);
+            Redis::hset("lobby:$id", "code", $code);
+            Redis::hset("lobby:$id", "visibility", $request->lobby_visibility);
+            Redis::hset("lobby:$id", "aihelp", $request->ai_help ? 1 : 0);
+            Redis::hset("lobby:$id", "timeout", 60*$request->timeout);
+            Redis::sadd("lobbies", $id);
 
             // Creating player1 user
-            FakeRedis::hset("lobby:$id:player1", "id", $request->user()->id);
-            FakeRedis::hset("lobby:$id:player1", "status", true);
+            Redis::hset("lobby:$id:player1", "id", $request->user()->id);
+            Redis::hset("lobby:$id:player1", "status", true);
         });
 
         return response()->json([
@@ -203,17 +203,17 @@ class LobbyController extends Controller
 
     public function deleteLobby(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('lobbies'))]
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))]
         ]);
 
         $status = true;
         Cache::lock("lobby_$request->id", 5)->get(function() use($request, &$status) {
-            if(FakeRedis::hget("lobby:$request->id:player1", "id") == $request->user()->id) {
-                $keys = FakeRedis::keys("lobby:$request->id*");
+            if(Redis::hget("lobby:$request->id:player1", "id") == $request->user()->id) {
+                $keys = Redis::keys("lobby:$request->id*");
                 foreach ($keys as $key) {
-                    FakeRedis::del($key);
+                    Redis::del($key);
                 }
-                FakeRedis::srem("lobbies", $request->id);
+                Redis::srem("lobbies", $request->id);
 
                 $payload = [
                     'lobby_id' => $request->id,
@@ -232,23 +232,23 @@ class LobbyController extends Controller
 
     public Function joinLobby(Request $request) {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('lobbies'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))],
             'password' => ['nullable']
         ]);
 
         $status = true;
         Cache::lock("lobby_$request->id", 5)->get(function() use(&$status ,$request) {
-            if(FakeRedis::exists("lobby:$request->id") && !FakeRedis::exists("lobby:$request->id:player2") && FakeRedis::hget("lobby:$request->id:player1", "id") != $request->user()->id) {
-                if(FakeRedis::hget("lobby:$request->id", "visibility") == 1) {
-                    if(!$request->has('password') || $request->password != FakeRedis::hget("lobby:$request->id", "code")) {
+            if(Redis::exists("lobby:$request->id") && !Redis::exists("lobby:$request->id:player2") && Redis::hget("lobby:$request->id:player1", "id") != $request->user()->id) {
+                if(Redis::hget("lobby:$request->id", "visibility") == 1) {
+                    if(!$request->has('password') || $request->password != Redis::hget("lobby:$request->id", "code")) {
                         $status = false;
                         return;
                     }
                 }
 
                 // Creating player2 user
-                FakeRedis::hset("lobby:$request->id:player2", "id", $request->user()->id);
-                FakeRedis::hset("lobby:$request->id:player2", "status", false);
+                Redis::hset("lobby:$request->id:player2", "id", $request->user()->id);
+                Redis::hset("lobby:$request->id:player2", "status", false);
 
                 $payload = [
                     'lobby_id' => $request->id,
@@ -275,12 +275,12 @@ class LobbyController extends Controller
 
     public function exitLobby(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('lobbies'))]
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))]
         ]);
 
         Cache::lock("lobby_$request->id", 5)->get(function() use($request) {
-            if(FakeRedis::exists("lobby:$request->id") && FakeRedis::hget("lobby:$request->id:player2", "id") == $request->user()->id) {
-                FakeRedis::del("lobby:$request->id:player2");
+            if(Redis::exists("lobby:$request->id") && Redis::hget("lobby:$request->id:player2", "id") == $request->user()->id) {
+                Redis::del("lobby:$request->id:player2");
 
                 $payload = [
                     'lobby_id' => $request->id,
@@ -301,13 +301,13 @@ class LobbyController extends Controller
 
     public function setReady(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('lobbies'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))],
             'ready' => ['required', 'boolean'],
         ]);
 
         Cache::lock("lobby_$request->id", 5)->get(function() use($request) {
-            if(FakeRedis::exists("lobby:$request->id") && FakeRedis::hget("lobby:$request->id:player2", "id") == $request->user()->id) {
-                FakeRedis::hset("lobby:$request->id:player2", "status", $request->ready);
+            if(Redis::exists("lobby:$request->id") && Redis::hget("lobby:$request->id:player2", "id") == $request->user()->id) {
+                Redis::hset("lobby:$request->id:player2", "status", $request->ready);
 
                 $payload = [
                     'lobby_id' => $request->id,

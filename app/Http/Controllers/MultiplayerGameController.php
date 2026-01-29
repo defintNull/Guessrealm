@@ -6,10 +6,10 @@ use App\Events\GameEvent;
 use App\Events\LobbyEvent;
 use App\Models\Photo;
 use App\Models\User;
-use App\Services\FakeRedis;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
@@ -39,48 +39,48 @@ class MultiplayerGameController extends Controller
 
     public function startGame(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('lobbies'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))],
         ]);
 
         $payload = [];
         Cache::lock("create_game", 10)->get(function() use($request, &$payload) {
             Cache::lock("lobby_$request->id", 5)->get(function() use($request, &$payload) {
 
-                $ids = FakeRedis::smembers('games');
+                $ids = Redis::smembers('games');
 
                 $id = 0;
                 while(in_array($id, $ids)) {
                     $id++;
                 }
 
-                $lobby = FakeRedis::hgetall("lobby:$request->id");
+                $lobby = Redis::hgetall("lobby:$request->id");
                 // Creating Game
-                FakeRedis::hset("game:$id", "id", $id);
-                FakeRedis::hset("game:$id", "aihelp", $lobby['aihelp']);
-                FakeRedis::hset("game:$id", "timeout", $lobby['timeout']);
-                FakeRedis::hset("game:$id", "game_state", 0);
-                FakeRedis::hset("game:$id", "photos", 0);
-                FakeRedis::sadd("games", $id);
+                Redis::hset("game:$id", "id", $id);
+                Redis::hset("game:$id", "aihelp", $lobby['aihelp']);
+                Redis::hset("game:$id", "timeout", $lobby['timeout']);
+                Redis::hset("game:$id", "game_state", 0);
+                Redis::hset("game:$id", "photos", 0);
+                Redis::sadd("games", $id);
 
                 // Creating players
-                FakeRedis::hset("game:$id:player1", "id", FakeRedis::hget("lobby:$request->id:player1", 'id'));
-                FakeRedis::hset("game:$id:player1", "loading", 1);
-                FakeRedis::hset("game:$id:player1", "character", 0);
-                FakeRedis::hset("game:$id:player1", "guess_character", 0);
-                FakeRedis::hset("game:$id:player2", "id", FakeRedis::hget("lobby:$request->id:player2", 'id'));
-                FakeRedis::hset("game:$id:player2", "loading", 1);
-                FakeRedis::hset("game:$id:player2", "character", 0);
-                FakeRedis::hset("game:$id:player2", "guess_character", 0);
+                Redis::hset("game:$id:player1", "id", Redis::hget("lobby:$request->id:player1", 'id'));
+                Redis::hset("game:$id:player1", "loading", 1);
+                Redis::hset("game:$id:player1", "character", 0);
+                Redis::hset("game:$id:player1", "guess_character", 0);
+                Redis::hset("game:$id:player2", "id", Redis::hget("lobby:$request->id:player2", 'id'));
+                Redis::hset("game:$id:player2", "loading", 1);
+                Redis::hset("game:$id:player2", "character", 0);
+                Redis::hset("game:$id:player2", "guess_character", 0);
 
                 // Deleting lobby
-                $keys = FakeRedis::keys("lobby:$request->id*");
+                $keys = Redis::keys("lobby:$request->id*");
                 foreach ($keys as $key) {
-                    FakeRedis::del($key);
+                    Redis::del($key);
                 }
-                FakeRedis::srem("lobbies", $request->id);
+                Redis::srem("lobbies", $request->id);
 
-                $player1_id = FakeRedis::hget("game:$id:player1", "id");
-                $player2_id = FakeRedis::hget("game:$id:player2", "id");
+                $player1_id = Redis::hget("game:$id:player1", "id");
+                $player2_id = Redis::hget("game:$id:player2", "id");
                 $guest_id = $player1_id == $request->user()->id ? $player2_id : $player1_id;
                 $payload = [
                     'lobby_id' => $request->id,
@@ -96,7 +96,7 @@ class MultiplayerGameController extends Controller
                         'profile_picture_path'
                     ])
                 ];
-                FakeRedis::hset("game:$id", "game_state", 1);
+                Redis::hset("game:$id", "game_state", 1);
                 broadcast(new LobbyEvent($request->id, $payload))->toOthers();
             });
         });
@@ -111,7 +111,7 @@ class MultiplayerGameController extends Controller
         return response()->json([
             'status' => 200,
             'game_websocket' => "game.".$filtered['game_id'].".player.".$request->user()->id,
-            'enemy' => User::find(FakeRedis::hget("game:".$filtered['game_id'].":player2", "id"))->only([
+            'enemy' => User::find(Redis::hget("game:".$filtered['game_id'].":player2", "id"))->only([
                         'id',
                         'username',
                         'profile_picture_path'
@@ -121,17 +121,17 @@ class MultiplayerGameController extends Controller
 
     public function getPhotos(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
         ]);
 
         $fotos = [];
         Cache::lock("game_$request->id", 5)->get(function() use($request, &$fotos) {
-            if(FakeRedis::exists("game:$request->id") && FakeRedis::hget("game:$request->id", "photos") == 0) {
+            if(Redis::exists("game:$request->id") && Redis::hget("game:$request->id", "photos") == 0) {
                 $photos = Photo::select(['id', 'name'])->inRandomOrder()->limit(24)->get();
-                FakeRedis::hset("game:$request->id", "photos", $photos->toJson());
+                Redis::hset("game:$request->id", "photos", $photos->toJson());
                 $fotos = $photos;
-            } else if(FakeRedis::exists("game:$request->id")) {
-                $fotos = json_decode(FakeRedis::hget("game:$request->id", "photos"));
+            } else if(Redis::exists("game:$request->id")) {
+                $fotos = json_decode(Redis::hget("game:$request->id", "photos"));
             }
         });
 
@@ -143,27 +143,27 @@ class MultiplayerGameController extends Controller
 
     public function endLoading(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            if(FakeRedis::hget("game:$request->id", "game_state") == 1) {
-                if(FakeRedis::exists("game:$request->id:player1") && FakeRedis::exists("game:$request->id:player2")) {
-                    if(FakeRedis::hget("game:$request->id:player1", "id") == $request->user()->id) {
-                        Fakeredis::hset("game:$request->id:player1", "loading", 0);
-                    } elseif(FakeRedis::hget("game:$request->id:player2", "id") == $request->user()->id) {
-                        Fakeredis::hset("game:$request->id:player2", "loading", 0);
+            if(Redis::hget("game:$request->id", "game_state") == 1) {
+                if(Redis::exists("game:$request->id:player1") && Redis::exists("game:$request->id:player2")) {
+                    if(Redis::hget("game:$request->id:player1", "id") == $request->user()->id) {
+                        Redis::hset("game:$request->id:player1", "loading", 0);
+                    } elseif(Redis::hget("game:$request->id:player2", "id") == $request->user()->id) {
+                        Redis::hset("game:$request->id:player2", "loading", 0);
                     }
                 } else {
                     return;
                 }
 
-                if(Fakeredis::hget("game:$request->id:player1", "loading") == 0 &&
-                    Fakeredis::hget("game:$request->id:player2", "loading") == 0
+                if(Redis::hget("game:$request->id:player1", "loading") == 0 &&
+                    Redis::hget("game:$request->id:player2", "loading") == 0
                 ){
-                    FakeRedis::hset("game:$request->id", "game_state", 2);
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 2, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 2, []));
+                    Redis::hset("game:$request->id", "game_state", 2);
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 2, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 2, []));
                 }
             }
         });
@@ -173,29 +173,29 @@ class MultiplayerGameController extends Controller
 
     public function chooseCharacter(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
             'character' => ['required', 'integer']
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            if(FakeRedis::hget("game:$request->id", "game_state") == 2) {
-                if(FakeRedis::exists("game:$request->id:player1") && FakeRedis::exists("game:$request->id:player2")) {
-                    if(FakeRedis::hget("game:$request->id:player1", "id") == $request->user()->id) {
-                        Fakeredis::hset("game:$request->id:player1", "character", $request->character);
-                    } elseif(FakeRedis::hget("game:$request->id:player2", "id") == $request->user()->id) {
-                        Fakeredis::hset("game:$request->id:player2", "character", $request->character);
+            if(Redis::hget("game:$request->id", "game_state") == 2) {
+                if(Redis::exists("game:$request->id:player1") && Redis::exists("game:$request->id:player2")) {
+                    if(Redis::hget("game:$request->id:player1", "id") == $request->user()->id) {
+                        Redis::hset("game:$request->id:player1", "character", $request->character);
+                    } elseif(Redis::hget("game:$request->id:player2", "id") == $request->user()->id) {
+                        Redis::hset("game:$request->id:player2", "character", $request->character);
                     }
                 } else {
                     return;
                 }
 
-                if(Fakeredis::hget("game:$request->id:player1", "character") != 0 &&
-                    Fakeredis::hget("game:$request->id:player2", "character") != 0
+                if(Redis::hget("game:$request->id:player1", "character") != 0 &&
+                    Redis::hget("game:$request->id:player2", "character") != 0
                 ){
-                    FakeRedis::hset("game:$request->id", "game_state", 3);
+                    Redis::hset("game:$request->id", "game_state", 3);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 3, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 6, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 3, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 6, []));
                 }
             }
         });
@@ -205,29 +205,29 @@ class MultiplayerGameController extends Controller
 
     public function chooseQuestion(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
             'question' => ['required', 'integer']
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            $game_state = FakeRedis::hget("game:$request->id", "game_state");
-            if(FakeRedis::exists("game:$request->id:player1") &&
-                FakeRedis::exists("game:$request->id:player2")
+            $game_state = Redis::hget("game:$request->id", "game_state");
+            if(Redis::exists("game:$request->id:player1") &&
+                Redis::exists("game:$request->id:player2")
             ){
-                if($game_state == 3 && $request->user()->id == FakeRedis::hget("game:$request->id:player1", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 4);
+                if($game_state == 3 && $request->user()->id == Redis::hget("game:$request->id:player1", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 4);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 4, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 7, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 4, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 7, [
                         'question' => $request->question
                     ]));
-                } elseif($game_state == 6 && $request->user()->id == FakeRedis::hget("game:$request->id:player2", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 7);
+                } elseif($game_state == 6 && $request->user()->id == Redis::hget("game:$request->id:player2", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 7);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 7, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 7, [
                         'question' => $request->question
                     ]));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 4, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 4, []));
                 }
             }
         });
@@ -237,27 +237,27 @@ class MultiplayerGameController extends Controller
 
     public function response(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
             'response' => ['required', 'boolean']
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            $game_state = FakeRedis::hget("game:$request->id", "game_state");
-            if(FakeRedis::exists("game:$request->id:player1") &&
-                FakeRedis::exists("game:$request->id:player2")
+            $game_state = Redis::hget("game:$request->id", "game_state");
+            if(Redis::exists("game:$request->id:player1") &&
+                Redis::exists("game:$request->id:player2")
             ){
-                if($game_state == 4 && $request->user()->id == FakeRedis::hget("game:$request->id:player2", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 5);
+                if($game_state == 4 && $request->user()->id == Redis::hget("game:$request->id:player2", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 5);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 5, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 5, [
                         'response' => $request->response
                     ]));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 8, []));
-                } elseif($game_state == 7 && $request->user()->id == FakeRedis::hget("game:$request->id:player1", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 8);
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 8, []));
+                } elseif($game_state == 7 && $request->user()->id == Redis::hget("game:$request->id:player1", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 8);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 8, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 5, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 8, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 5, [
                         'response' => $request->response
                     ]));
                 }
@@ -269,29 +269,29 @@ class MultiplayerGameController extends Controller
 
     public function endClosure(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
             'remaining' => ['required', 'integer']
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            $game_state = FakeRedis::hget("game:$request->id", "game_state");
-            if(FakeRedis::exists("game:$request->id:player1") &&
-                FakeRedis::exists("game:$request->id:player2")
+            $game_state = Redis::hget("game:$request->id", "game_state");
+            if(Redis::exists("game:$request->id:player1") &&
+                Redis::exists("game:$request->id:player2")
             ){
-                if($game_state == 5 && $request->user()->id == FakeRedis::hget("game:$request->id:player1", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 6);
+                if($game_state == 5 && $request->user()->id == Redis::hget("game:$request->id:player1", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 6);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 6, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 3, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 6, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 3, [
                         'remaining' => $request->remaining
                     ]));
-                } elseif($game_state == 8 && $request->user()->id == FakeRedis::hget("game:$request->id:player2", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 3);
+                } elseif($game_state == 8 && $request->user()->id == Redis::hget("game:$request->id:player2", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 3);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 3, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 3, [
                         'remaining' => $request->remaining
                     ]));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 6, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 6, []));
                 }
             }
         });
@@ -301,24 +301,24 @@ class MultiplayerGameController extends Controller
 
     public function skip(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            $game_state = FakeRedis::hget("game:$request->id", "game_state");
-            if(FakeRedis::exists("game:$request->id:player1") &&
-                FakeRedis::exists("game:$request->id:player2")
+            $game_state = Redis::hget("game:$request->id", "game_state");
+            if(Redis::exists("game:$request->id:player1") &&
+                Redis::exists("game:$request->id:player2")
             ){
-                if($game_state == 3 && $request->user()->id == FakeRedis::hget("game:$request->id:player1", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 6);
+                if($game_state == 3 && $request->user()->id == Redis::hget("game:$request->id:player1", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 6);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 6, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 3, []));
-                } elseif($game_state == 6 && $request->user()->id == FakeRedis::hget("game:$request->id:player2", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 3);
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 6, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 3, []));
+                } elseif($game_state == 6 && $request->user()->id == Redis::hget("game:$request->id:player2", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 3);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 3, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 6, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 3, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 6, []));
                 }
             }
         });
@@ -328,24 +328,24 @@ class MultiplayerGameController extends Controller
 
     public function guess(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            $game_state = FakeRedis::hget("game:$request->id", "game_state");
-            if(FakeRedis::exists("game:$request->id:player1") &&
-                FakeRedis::exists("game:$request->id:player2")
+            $game_state = Redis::hget("game:$request->id", "game_state");
+            if(Redis::exists("game:$request->id:player1") &&
+                Redis::exists("game:$request->id:player2")
             ){
-                if($game_state == 3 && $request->user()->id == FakeRedis::hget("game:$request->id:player1", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 9);
+                if($game_state == 3 && $request->user()->id == Redis::hget("game:$request->id:player1", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 9);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 9, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 11, []));
-                } elseif($game_state == 6 && $request->user()->id == FakeRedis::hget("game:$request->id:player2", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 11);
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 9, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 11, []));
+                } elseif($game_state == 6 && $request->user()->id == Redis::hget("game:$request->id:player2", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 11);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 11, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 9, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 11, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 9, []));
                 }
             }
         });
@@ -355,31 +355,31 @@ class MultiplayerGameController extends Controller
 
     public function guessCharacter(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
             'character' => ['required', 'integer'],
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            $game_state = FakeRedis::hget("game:$request->id", "game_state");
-            if(FakeRedis::exists("game:$request->id:player1") &&
-                FakeRedis::exists("game:$request->id:player2")
+            $game_state = Redis::hget("game:$request->id", "game_state");
+            if(Redis::exists("game:$request->id:player1") &&
+                Redis::exists("game:$request->id:player2")
             ){
-                if($game_state == 9 && $request->user()->id == FakeRedis::hget("game:$request->id:player1", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 10);
-                    FakeRedis::hset("game:$request->id:player1", "guess_character", $request->character);
+                if($game_state == 9 && $request->user()->id == Redis::hget("game:$request->id:player1", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 10);
+                    Redis::hset("game:$request->id:player1", "guess_character", $request->character);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 10, []));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 12, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 10, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 12, [
                         'character' => $request->character
                     ]));
-                } elseif($game_state == 11 && $request->user()->id == FakeRedis::hget("game:$request->id:player2", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 12);
-                    FakeRedis::hset("game:$request->id:player2", "guess_character", $request->character);
+                } elseif($game_state == 11 && $request->user()->id == Redis::hget("game:$request->id:player2", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 12);
+                    Redis::hset("game:$request->id:player2", "guess_character", $request->character);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 12, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 12, [
                         'character' => $request->character
                     ]));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 10, []));
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 10, []));
                 }
             }
         });
@@ -389,44 +389,44 @@ class MultiplayerGameController extends Controller
 
     public function guessResponse(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
             'response' => ['required', 'boolean'],
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            $game_state = FakeRedis::hget("game:$request->id", "game_state");
-            if(FakeRedis::exists("game:$request->id:player1") &&
-                FakeRedis::exists("game:$request->id:player2")
+            $game_state = Redis::hget("game:$request->id", "game_state");
+            if(Redis::exists("game:$request->id:player1") &&
+                Redis::exists("game:$request->id:player2")
             ){
-                if($game_state == 10 && $request->user()->id == FakeRedis::hget("game:$request->id:player2", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 13);
+                if($game_state == 10 && $request->user()->id == Redis::hget("game:$request->id:player2", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 13);
 
-                    $result = FakeRedis::hget("game:$request->id:player1", "guess_character") == FakeRedis::hget("game:$request->id:player2", "character");
+                    $result = Redis::hget("game:$request->id:player1", "guess_character") == Redis::hget("game:$request->id:player2", "character");
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
                         'end' => $result,
                     ]));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
                         'end' => !$result
                     ]));
-                } elseif($game_state == 12 && $request->user()->id == FakeRedis::hget("game:$request->id:player1", 'id')) {
-                    FakeRedis::hset("game:$request->id", "game_state", 13);
+                } elseif($game_state == 12 && $request->user()->id == Redis::hget("game:$request->id:player1", 'id')) {
+                    Redis::hset("game:$request->id", "game_state", 13);
 
-                    $result = FakeRedis::hget("game:$request->id:player2", "guess_character") == FakeRedis::hget("game:$request->id:player1", "character");
+                    $result = Redis::hget("game:$request->id:player2", "guess_character") == Redis::hget("game:$request->id:player1", "character");
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
                         'end' => !$result,
                     ]));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
                         'end' => $result
                     ]));
                 }
 
-                $keys = FakeRedis::keys("game:$request->id*");
+                $keys = Redis::keys("game:$request->id*");
                 foreach ($keys as $key) {
-                    FakeRedis::del($key);
+                    Redis::del($key);
                 }
-                FakeRedis::srem("games", $request->id);
+                Redis::srem("games", $request->id);
             }
         });
 
@@ -435,30 +435,30 @@ class MultiplayerGameController extends Controller
 
     public function endTimer(Request $request) : JsonResponse {
         $request->validate([
-            'id' => ['required', 'integer', Rule::in(FakeRedis::smembers('games'))],
+            'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
         ]);
 
         Cache::lock("game_$request->id", 5)->get(function() use($request) {
-            $game_state = FakeRedis::hget("game:$request->id", "game_state");
-            if(FakeRedis::exists("game:$request->id:player1") &&
-                FakeRedis::exists("game:$request->id:player2")
+            $game_state = Redis::hget("game:$request->id", "game_state");
+            if(Redis::exists("game:$request->id:player1") &&
+                Redis::exists("game:$request->id:player2")
             ){
-                if(in_array($game_state, [7, 9, 12]) || ($game_state == 2 && FakeRedis::hget("game:$request->id:player1", "character") == 0)) {
-                    FakeRedis::hset("game:$request->id", "game_state", 13);
+                if(in_array($game_state, [7, 9, 12]) || ($game_state == 2 && Redis::hget("game:$request->id:player1", "character") == 0)) {
+                    Redis::hset("game:$request->id", "game_state", 13);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
                         'end' => false,
                     ]));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
                         'end' => true,
                     ]));
-                } elseif(in_array($game_state, [4, 10, 11]) || ($game_state == 2 && FakeRedis::hget("game:$request->id:player2", "character") == 0)) {
-                    FakeRedis::hset("game:$request->id", "game_state", 13);
+                } elseif(in_array($game_state, [4, 10, 11]) || ($game_state == 2 && Redis::hget("game:$request->id:player2", "character") == 0)) {
+                    Redis::hset("game:$request->id", "game_state", 13);
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
                         'end' => true,
                     ]));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
                         'end' => false,
                     ]));
                 }
@@ -484,39 +484,39 @@ class MultiplayerGameController extends Controller
 
         if($request->type == "lobby") {
             Cache::lock("lobby_$request->id", 5)->get(function() use($request) {
-                if(FakeRedis::exists("lobby:$request->id")) {
+                if(Redis::exists("lobby:$request->id")) {
                     $payload = [
                         'lobby_id' => $request->id,
                         'action' => 'DELETE',
                     ];
                     broadcast(new LobbyEvent($request->id, $payload))->toOthers();
 
-                    $keys = FakeRedis::keys("lobby:$request->id*");
+                    $keys = Redis::keys("lobby:$request->id*");
                     foreach ($keys as $key) {
-                        FakeRedis::del($key);
+                        Redis::del($key);
                     }
-                    FakeRedis::srem("lobbies", $request->id);
+                    Redis::srem("lobbies", $request->id);
                 }
             });
         } else {
             Cache::lock("game_$request->id", 5)->get(function() use($request) {
-                if(FakeRedis::exists("game:$request->id")) {
-                    FakeRedis::hset("game:$request->id", "game_state", 13);
+                if(Redis::exists("game:$request->id")) {
+                    Redis::hset("game:$request->id", "game_state", 13);
 
-                    $result = FakeRedis::hget("game:$request->id:player1", "id") == $request->user()->id;
+                    $result = Redis::hget("game:$request->id:player1", "id") == $request->user()->id;
 
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player1", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player1", "id"), 13, [
                         'end' => !$result,
                     ]));
-                    broadcast(new GameEvent($request->id, FakeRedis::hget("game:$request->id:player2", "id"), 13, [
+                    broadcast(new GameEvent($request->id, Redis::hget("game:$request->id:player2", "id"), 13, [
                         'end' => $result
                     ]));
 
-                    $keys = FakeRedis::keys("game:$request->id*");
+                    $keys = Redis::keys("game:$request->id*");
                     foreach ($keys as $key) {
-                        FakeRedis::del($key);
+                        Redis::del($key);
                     }
-                    FakeRedis::srem("games", $request->id);
+                    Redis::srem("games", $request->id);
                 }
             });
         }
