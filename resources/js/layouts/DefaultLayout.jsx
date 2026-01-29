@@ -84,6 +84,11 @@ export default function DefaultLayout() {
                                         </NavigationMenuLink>
                                     </NavigationMenuItem>
                                     <NavigationMenuItem>
+                                        <NavigationMenuLink asChild>
+                                            <Link to="/statistics">Statistics</Link>
+                                        </NavigationMenuLink>
+                                    </NavigationMenuItem>
+                                    <NavigationMenuItem>
                                         <NavigationMenuLink className="cursor-pointer" onClick={logoutCallback}>
                                             Logout
                                         </NavigationMenuLink>
