@@ -19,6 +19,8 @@ import { MultiplayerGameProvider } from "@/context/MultiplayerGameProvider";
 import { MultiplayerGameMiddleware } from "./middlewares/MultiplayerGameMiddleware";
 import MultiplayerGame from "@/pages/MultiplayerGame";
 import Chat from "@/pages/Chat";
+import NotFound from "@/pages/NotFound";
+import Statistics from "@/pages/Statistics";
 
 
 const router = createBrowserRouter([
@@ -111,6 +113,14 @@ const router = createBrowserRouter([
                 )
             },
             {
+                path: "statistics",
+                element : (
+                    <AuthMiddleware>
+                        <Statistics />
+                    </AuthMiddleware>
+                )
+            },
+            {
                 path: "password",
                 element : (
                     <AuthMiddleware>
@@ -127,6 +137,12 @@ const router = createBrowserRouter([
                 )
             },
         ]
+    },
+    {
+        path: "*",
+        element : (
+            <NotFound />
+        )
     }
 ]);
 
