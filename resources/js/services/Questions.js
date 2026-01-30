@@ -1,3 +1,7 @@
+
+/**
+ * Available question for the game
+ */
 export default function Questions() {
     return [
         "Sta sorrindendo?",//0

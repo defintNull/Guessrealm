@@ -72,6 +72,9 @@ class StatisticsController extends Controller
         ], 200);
     }
 
+    /**
+     * Update a statistic entity given a user and the result of a game
+     */
     public static function update(string $user_id, bool $result) : void {
         $player = User::find($user_id);
         if ($player && $player->statistic) {

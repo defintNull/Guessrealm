@@ -10,6 +10,7 @@ class SPAMiddleware
 {
     /**
      * Handle an incoming request.
+     * Check if the request is an ajax request
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */

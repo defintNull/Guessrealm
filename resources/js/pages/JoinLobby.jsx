@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
 import { useNavigate } from "react-router-dom";
 import { useEnableLobby } from "@/context/LobbyProvider";
+import { TbReload } from "react-icons/tb";
 
 
 export default function JoinLobby() {
@@ -33,6 +34,7 @@ export default function JoinLobby() {
     const [ passwordCode, setPasswordCode ] = useState(null);
     const [ selecteddLobby, setSelectedlobby ] = useState(null);
     const [ dialogLobbyWrongPassword, setDialogLobbyWrongPassword ] = useState(false);
+    const [ reload, setReload ] = useState(false);
 
     useEffect(() => {
         axios.get('/spa/lobby/index')
@@ -124,6 +126,16 @@ export default function JoinLobby() {
         setDialogLobbyPassword(true);
     }
 
+    function reloadHandle() {
+        setLobbies([]);
+        setReload(true);
+        axios.get('/spa/lobby/index')
+        .then((res) => {
+            setLobbies(res.data?.lobbies);
+            setReload(false)
+        });
+    }
+
     return <div className="flex flex-col items-center justify-center w-full grow">
         <Card className="w-1/2 px-6 py-8">
             <CardHeader>
@@ -131,6 +143,7 @@ export default function JoinLobby() {
             </CardHeader>
             <CardContent className="pt-2">
                 <div className="flex flex-row items-center justify-center pb-4 gap-x-4">
+                    <TbReload className={`h-12 w-12 cursor-pointer ${reload ? "animate-spin" : ""}`} onClick={reloadHandle}/>
                     <p className="text-lg">Lobbies:</p>
                     <Input type="text" placeholder="Find lobby..." onChange={searchSubmitHandler}></Input>
                     <Select value={filterVisibility} onValueChange={(v) => {setFilterVisibility(v)}}>

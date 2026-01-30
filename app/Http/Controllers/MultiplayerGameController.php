@@ -37,6 +37,9 @@ class MultiplayerGameController extends Controller
      * games = {1, 2, 3}
     */
 
+    /**
+     * Manage the starting of a game, setting redis values, setting the state machine and broadcasting the start
+     */
     public function startGame(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))],
@@ -73,9 +76,11 @@ class MultiplayerGameController extends Controller
                 Redis::hset("game:$id:player2", "guess_character", 0);
 
                 // Deleting lobby
+                $prefix = config('database.redis.options.prefix');
                 $keys = Redis::keys("lobby:$request->id*");
                 foreach ($keys as $key) {
-                    Redis::del($key);
+                    $cleanKey = str_replace($prefix, '', $key);
+                    Redis::del($cleanKey);
                 }
                 Redis::srem("lobbies", $request->id);
 
@@ -119,6 +124,9 @@ class MultiplayerGameController extends Controller
         ] + $filtered, 200);
     }
 
+    /**
+     * Return the 24 fotos needed for a game
+     */
     public function getPhotos(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -141,6 +149,9 @@ class MultiplayerGameController extends Controller
         ], 200);
     }
 
+    /**
+     * Broadcast the end loading event when all the player have load the foto and analyzed them
+     */
     public function endLoading(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -171,6 +182,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Manage the choose character phase
+     */
     public function chooseCharacter(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -203,6 +217,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Manage the choose question phase
+     */
     public function chooseQuestion(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -235,6 +252,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Manage the question response phase
+     */
     public function response(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -267,6 +287,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Function to manage the end of the closing phase
+     */
     public function endClosure(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -299,6 +322,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Manage the skip action when the timer is pressed
+     */
     public function skip(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -326,6 +352,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Manage the entering in guess phase
+     */
     public function guess(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -353,6 +382,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Manage the guess character phase
+     */
     public function guessCharacter(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -387,6 +419,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Manage the response of the guess, broadcast the result and update the statistics
+     */
     public function guessResponse(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -432,9 +467,11 @@ class MultiplayerGameController extends Controller
                     StatisticsController::update($player2_id, $result);
                 }
 
+                $prefix = config('database.redis.options.prefix');
                 $keys = Redis::keys("game:$request->id*");
                 foreach ($keys as $key) {
-                    Redis::del($key);
+                    $cleanKey = str_replace($prefix, '', $key);
+                    Redis::del($cleanKey);
                 }
                 Redis::srem("games", $request->id);
             }
@@ -443,6 +480,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Manage the event generated when the phase timer end
+     */
     public function endTimer(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('games'))],
@@ -488,6 +528,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Manage the exit of a player during the game
+     */
     public function exit(Request $request) : JsonResponse {
         if (empty($request->all())) {
             $raw = $request->getContent();
@@ -505,17 +548,34 @@ class MultiplayerGameController extends Controller
         if($request->type == "lobby") {
             Cache::lock("lobby_$request->id", 5)->get(function() use($request) {
                 if(Redis::exists("lobby:$request->id")) {
-                    $payload = [
-                        'lobby_id' => $request->id,
-                        'action' => 'DELETE',
-                    ];
-                    broadcast(new LobbyEvent($request->id, $payload))->toOthers();
+                    if(Redis::hget("lobby:$request->id:player1", "id") != $request->user()->id) {
+                        Redis::del("lobby:$request->id:player2");
 
-                    $keys = Redis::keys("lobby:$request->id*");
-                    foreach ($keys as $key) {
-                        Redis::del($key);
+                        $payload = [
+                            'lobby_id' => $request->id,
+                            'action' => 'EXIT',
+                            'user' => $request->user()->only([
+                                'id',
+                                'username'
+                            ])
+                        ];
+                        broadcast(new LobbyEvent($request->id, $payload))->toOthers();
+                    } else {
+                        $prefix = config('database.redis.options.prefix');
+                        $keys = Redis::keys("lobby:$request->id*");
+                        foreach ($keys as $key) {
+                            $cleanKey = str_replace($prefix, '', $key);
+                            Redis::del($cleanKey);
+                        }
+                        Redis::srem("lobbies", $request->id);
+
+                        $payload = [
+                            'lobby_id' => $request->id,
+                            'action' => 'DELETE',
+                            'debug' => $keys
+                        ];
+                        broadcast(new LobbyEvent($request->id, $payload))->toOthers();
                     }
-                    Redis::srem("lobbies", $request->id);
                 }
             });
         } else {
@@ -537,9 +597,11 @@ class MultiplayerGameController extends Controller
                     ]));
                     $result ? StatisticsController::update($player2_id, $result) : null;
 
+                    $prefix = config('database.redis.options.prefix');
                     $keys = Redis::keys("game:$request->id*");
                     foreach ($keys as $key) {
-                        Redis::del($key);
+                        $cleanKey = str_replace($prefix, '', $key);
+                        Redis::del($cleanKey);
                     }
                     Redis::srem("games", $request->id);
                 }
@@ -549,6 +611,9 @@ class MultiplayerGameController extends Controller
         return response()->json();
     }
 
+    /**
+     * Return the bg music audio file
+     */
     public function getBgMusic() {
         return response()->file(
                 Storage::disk('local')->path('Audios/bgmusic.mp3')

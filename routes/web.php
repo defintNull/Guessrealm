@@ -11,6 +11,9 @@ use App\Http\Controllers\MultiplayerGameController;
 use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\UserController;
 
+/**
+ * React route
+ */
 Route::get('/', function () {
     return view('App');
 });
@@ -25,6 +28,9 @@ Route::get('/checkEmail/{email}', [AuthController::class, 'checkEmail'])
 
 
 Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(function () {
+    /**
+     * Guest routes
+     */
     Route::middleware('guest')->group(function () {
         Route::post("/login", [AuthController::class, 'login'])
             ->middleware('throttle:login')
@@ -35,12 +41,18 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             ->name('register');
     });
 
+    /**
+     * Auth routes
+     */
     Route::middleware('auth:web')->group(function () {
 
         Route::get('avatar/{username}', [AuthController::class, 'profilePicture'])
             ->withoutMiddleware(SPAMiddleware::class)
             ->name('user.avatar');
 
+        /**
+         * Chat routes
+         */
         Route::group([], function () {
             // 1. LISTA CHAT (Sidebar)
             Route::get('/chats', [ChatController::class, 'index'])
@@ -97,6 +109,9 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
                 ->name('leaderboard');
         });
 
+        /**
+         * Game routes
+         */
         Route::name('game.')->prefix('game')->group(function () {
             Route::post('photos', [PhotoController::class, 'index'])
                 ->name('photos');
@@ -110,6 +125,9 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
                 ->name('bgmusic');
         });
 
+        /**
+         * Ai routes
+         */
         Route::name('ai.')->prefix('ai')->group(function () {
             Route::get('aimodel', [AiController::class, 'getModel'])
                 ->name('getModel');
@@ -118,6 +136,9 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
             //     ->name('getDataModel');
         });
 
+        /**
+         * Lobby routes
+         */
         Route::name('lobby.')->prefix('lobby')->group(function () {
             Route::get('index', [LobbyController::class, 'index'])
                 ->name('index');
@@ -144,6 +165,9 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
                 ->name('setReady');
         });
 
+        /**
+         * Multiplayer routes
+         */
         Route::name('multiplayer.')->prefix('multiplayer')->group(function () {
             Route::post('start', [MultiplayerGameController::class, 'startGame'])
                 ->name('start');
@@ -184,10 +208,16 @@ Route::middleware([SPAMiddleware::class])->prefix('spa')->name('spa.')->group(fu
     });
 });
 
+/**
+ * Exit route
+ */
 Route::post('/spa/exit', [MultiplayerGameController::class, 'exit'])
     ->middleware('auth')
     ->name('exit');
 
+/**
+ * Fallback route
+ */
 Route::get('/{any}', function () {
     return view('App');
 })->where('any', '.*');

@@ -1,8 +1,14 @@
+/**
+ * Bot behaviour to choose a character
+ */
 export function botChooseCharacter(photos) {
     const n = Math.floor(Math.random() * (photos.length));
     return photos[n];
 }
 
+/**
+ * Bot behaviour to choose a character
+ */
 export async function botChooseIfGuess(photos, difficulty) {
     let candidates = photos.filter(el => el?.state == false);
     if((difficulty == 0 && candidates.length <= 4) || candidates.length <= 2) {
@@ -11,6 +17,9 @@ export async function botChooseIfGuess(photos, difficulty) {
     return false
 }
 
+/**
+ * Bot behaviour to choose a character
+ */
 export async function botGuess(photos, difficulty) {
     let candidates = photos.filter(el => el?.state == false);
     let n = 0;
@@ -25,11 +34,17 @@ export async function botGuess(photos, difficulty) {
     }
 }
 
+/**
+ * Bot behaviour to choose a character
+ */
 export async function botQuestionResponse(photo, question) {
     await new Promise(resolve => setTimeout(resolve, 3000));
     return photo?.questions.find(el => el.id == question.id)?.response;
 }
 
+/**
+ * Bot behaviour to choose a character
+ */
 export async function botAskQuestion(photos, difficulty, questions) {
     await new Promise(resolve => setTimeout(resolve, 3000));
     if(difficulty == 0) {
@@ -88,6 +103,9 @@ export async function botAskQuestion(photos, difficulty, questions) {
     }
 }
 
+/**
+ * Bot behaviour to choose a character
+ */
 export async function botRegisterResponse(photos, question, response) {
     await new Promise(resolve => setTimeout(resolve, 3000));
     return photos.map(el => {

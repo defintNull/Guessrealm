@@ -6,6 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Str;
 
+/**
+ * Resource used to manage the chats durinc comunications
+ */
 class ChatResource extends JsonResource
 {
     protected $authUser; // qui salviamo l'ID utente

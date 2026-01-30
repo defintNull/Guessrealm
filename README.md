@@ -1,62 +1,91 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+## Descrizione del Progetto
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Guessrealm è un'applicazione web sviluppata con il framework **Laravel**, progettata per offrire un'esperienza interattiva e coinvolgente.
+L'app consente agli utenti di partecipare al classico gioco di Indovina Chi reso più dinamico attraverso l'introduzione di un modello di ML per l'analisi
+facciale dei volti in modo da garantire una partita con volti più vari rispetto ad un set specifico con caratteristiche hardcodate.
+Consiste in due modalità, una singleplayer contro un bot con difficoltà regolabile e una multiplayer contro un altro giocatore in tempo reale.
 
-## About Laravel
+## Tecnologie utilizzate
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Laravel** (PHP)
+- **React** per il frontend
+- **Tailwind CSS** per lo styling
+- **MySQL / MariaDB** per il database relazionale
+- **Redis** per cache, sessioni e code di background
+- **WebSockets** per il broadcasting in tempo reale
+- **Python** (server fastApi per popolazione database)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirementes
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+1. php 8.2^
+2. node 22^
+3. composer
+4. python
+5. docker (opzionale)
 
-## Learning Laravel
+## Configurazione
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+1. Copia il file di ambiente e genera la chiave dell'applicazione:
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+2. Installa le dipendenze:
+```bash
+composer install
+npm install
+```
+3. Configurazione variabili di ambiente
+   
+   1. Se si sceglie di usare docker con Laravel Sail configurare
+        ```bash
+        REVERB_APP_ID=
+        REVERB_APP_KEY=
+        REVERB_APP_SECRET=
+        ```
+   2. Se non si usa docker
+        configurare l'env secondo i servizi che si usa sulla propria macchina per db, porte etc e modificare
+        ```bash
+        REDIS_DRIVER=false
+        ```
+    
+   
+4. Esegui le migrazioni e i seeder:
+```bash
+php artisan migrate
+php artisan db:seed
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Avvio
+1. Con docker e Laravel Sali
+   1. Configurare un alias per Laravel Sali
+        ```bash
+        nano ~/.bashrc
+        alias sail='[ -f sail ] && bash sail || bash vendor/bin/sail'
+        ```
+   2. Avviare Laravel Sail
+        ```bash
+        sail up
+        ```
+   3. Avviare il resto dei servizzi
+        ```bash
+        sail npm run dev
+        sail artisan reverb:start
+        sail artisan queue:work --queue=high,medium,low
+        php artisan schedule:work
+        ```
+        
+2. Senza l'utilizzo di docker:
+   1. Avviare i vari servizzi
+    ```bash
+    php artisan serve
+    npm run dev
+    php artisan reverb:start
+    php artisan queue:work --queue=high,medium,low
+    php artisan schedule:work
+    ```
 
-## Laravel Sponsors
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
-
-### Premium Partners
-
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
 ### Commands
 

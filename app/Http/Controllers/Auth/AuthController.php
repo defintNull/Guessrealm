@@ -15,6 +15,9 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    /**
+     * Implements the login logic and validation
+     */
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -50,6 +53,9 @@ class AuthController extends Controller
         ], 401);
     }
 
+    /**
+     * Implements the register logic and field validation
+     */
     public function register(Request $request): JsonResponse
     {
         $request->validate([
@@ -120,6 +126,9 @@ class AuthController extends Controller
         ], 200);
     }
 
+    /**
+     * Called to manage user state during react refreshes to provide user information if logged
+     */
     public function me()
     {
         /** @var \App\Models\User $user */
@@ -139,6 +148,9 @@ class AuthController extends Controller
         ], 200);
     }
 
+    /**
+     * Manage the logout logic
+     */
     public function logout(Request $request)
     {
         Auth::logout();
@@ -152,6 +164,9 @@ class AuthController extends Controller
         ], 200);
     }
 
+    /**
+     * Return the profile picture of a user given its username
+     */
     public function profilePicture($username)
     {
         $user = User::where('username', $username)->firstOrFail();
@@ -179,6 +194,9 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Manage the update profile logic
+     */
     public function update(Request $request)
     {
         $user = $request->user();
@@ -239,6 +257,9 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Validation function used to check availability of a username
+     */
     public function checkUsername(String $username)
     {
         $user = Auth::user();
@@ -254,6 +275,9 @@ class AuthController extends Controller
         return response()->json(['exists' => $exists]);
     }
 
+    /**
+     * Validation function used to check availability of a email
+     */
     public function checkEmail(String $email)
     {
         $user = Auth::user();
@@ -269,6 +293,9 @@ class AuthController extends Controller
         return response()->json(['exists' => $exists]);
     }
 
+    /**
+     * Manage the update pssword logic
+     */
     public function updatePassword(Request $request)
     {
         // Validation

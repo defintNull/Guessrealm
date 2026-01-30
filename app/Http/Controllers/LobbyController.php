@@ -32,6 +32,9 @@ class LobbyController extends Controller
      * lobbies = {1, 2, 3}
     */
 
+    /**
+     * Return the first 20 available lobbies
+     */
     public function index(Request $request): JsonResponse
     {
         $request->validate([
@@ -55,6 +58,9 @@ class LobbyController extends Controller
                     'visibility' => (int) $data['visibility'],
                 ];
             }
+            if(count($result) == 20) {
+                break;
+            }
         }
 
         return response()->json([
@@ -63,6 +69,9 @@ class LobbyController extends Controller
         ]);
     }
 
+    /**
+     * Show the detail of a given lobby
+     */
     public function show(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer']
@@ -129,6 +138,9 @@ class LobbyController extends Controller
         ]);
     }
 
+    /**
+     * Manage the lobby timeout event
+     */
     public function timer(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))]
@@ -136,9 +148,11 @@ class LobbyController extends Controller
 
         Cache::lock("lobby_$request->id", 5)->get(function() use($request) {
             if(Redis::exists("lobby:$request->id")) {
+                $prefix = config('database.redis.options.prefix');
                 $keys = Redis::keys("lobby:$request->id*");
                 foreach ($keys as $key) {
-                    Redis::del($key);
+                    $cleanKey = str_replace($prefix, '', $key);
+                    Redis::del($cleanKey);
                 }
                 Redis::srem("lobbies", $request->id);
             }
@@ -149,6 +163,9 @@ class LobbyController extends Controller
         ], 200);
     }
 
+    /**
+     * Private function to generate a unique lobby name
+     */
     private function generateLobbyName(): string
     {
         $adjectives = ['sleepy', 'stoic', 'eager', 'brave', 'frosty', 'serene', 'bold', 'mystic', 'clever', 'happy'];
@@ -161,7 +178,9 @@ class LobbyController extends Controller
             Str::lower(Str::random(5));
     }
 
-
+    /**
+     * Manage the creation of a lobby entity
+     */
     public function createLobby(Request $request) : JsonResponse {
         $request->validate([
             "lobby_visibility" => ['required' ,'integer', "in:0,1"],
@@ -201,6 +220,9 @@ class LobbyController extends Controller
         ], 200);
     }
 
+    /**
+     * Manage the deletion of a lobby entity
+     */
     public function deleteLobby(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))]
@@ -209,9 +231,11 @@ class LobbyController extends Controller
         $status = true;
         Cache::lock("lobby_$request->id", 5)->get(function() use($request, &$status) {
             if(Redis::hget("lobby:$request->id:player1", "id") == $request->user()->id) {
+                $prefix = config('database.redis.options.prefix');
                 $keys = Redis::keys("lobby:$request->id*");
                 foreach ($keys as $key) {
-                    Redis::del($key);
+                    $cleanKey = str_replace($prefix, '', $key);
+                    Redis::del($cleanKey);
                 }
                 Redis::srem("lobbies", $request->id);
 
@@ -230,6 +254,9 @@ class LobbyController extends Controller
         ], 200);
     }
 
+    /**
+     * Manage the join event in a given lobby
+     */
     public Function joinLobby(Request $request) {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))],
@@ -273,6 +300,9 @@ class LobbyController extends Controller
         ], 200);
     }
 
+    /**
+     * Manage the exit event from a given lobby
+     */
     public function exitLobby(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))]
@@ -299,6 +329,9 @@ class LobbyController extends Controller
         ], 200);
     }
 
+    /**
+     * Set the ready state for the player2 user
+     */
     public function setReady(Request $request) : JsonResponse {
         $request->validate([
             'id' => ['required', 'integer', Rule::in(Redis::smembers('lobbies'))],

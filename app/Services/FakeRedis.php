@@ -5,6 +5,9 @@ namespace App\Services;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
+/**
+ * Service to emulate a redis istance for the developing without redis
+ */
 class FakeRedis
 {
     protected static string $table = 'fake_redis';

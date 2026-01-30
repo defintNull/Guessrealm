@@ -114,4 +114,15 @@ return [
 
     'prefix' => env('CACHE_PREFIX', Str::slug((string) env('APP_NAME', 'laravel')).'-cache-'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Fake redis swap
+    |--------------------------------------------------------------------------
+    |
+    | Variable used for switching between redis when enabled (true) and the
+    | service FakeRedis to simulate redis on db (false)
+    |
+    */
+
+    'redis_driver' => env('REDIS_DRIVER', true),
 ];

@@ -14,6 +14,9 @@ use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
+    /**
+     * Return the chats of the current user
+     */
     public function index(Request $request)
     {
         $user = $request->user();
@@ -26,6 +29,9 @@ class ChatController extends Controller
         return ChatResource::collection($chats);
     }
 
+    /**
+     * Return the message of a given chat of the current user
+     */
     public function show(Request $request, Chat $chat)
     {
         Gate::authorize('view', $chat);
@@ -44,6 +50,9 @@ class ChatController extends Controller
         return MessageResource::collection($messages);
     }
 
+    /**
+     * Manage the logic for sending a message storing it in db and sending it through websocket
+     */
     public function sendMessage(Request $request, Chat $chat)
     {
         Gate::authorize('view', $chat);
@@ -73,6 +82,9 @@ class ChatController extends Controller
         return new MessageResource($message->load('user'));
     }
 
+    /**
+     * Manage the creation of a private chat or a group chat notifying other users through websocket
+     */
     public function store(Request $request)
     {
         // 1. Validazione intelligente
@@ -153,6 +165,9 @@ class ChatController extends Controller
         }
     }
 
+    /**
+     * Search function to find users to chat with
+     */
     public function search(Request $request, Chat $chat)
     {
         Gate::authorize('view', $chat);

@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
+    /**
+     * Return users for the chat group select
+     */
     public function index(Request $request)
     {
         $search = $request->input('search');

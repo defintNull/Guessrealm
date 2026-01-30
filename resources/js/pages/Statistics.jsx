@@ -92,7 +92,7 @@ export default function Statistics() {
                                         <p>No players available...</p>
                                     ) : (
                                         leaderboard.map(el => {
-                                            return <Card className="w-full">
+                                            return <Card key={el?.username} className="w-full">
                                                 <CardContent className="flex flex-row items-center justify-between">
                                                     <div className="flex flex-row items-center gap-x-2">
                                                         <Avatar className="h-12 w-12">
@@ -123,7 +123,7 @@ export default function Statistics() {
                                         <p>No players available...</p>
                                     ) : (
                                         leaderboardWinners.map(el => {
-                                            return <Card className="w-full">
+                                            return <Card key={el?.username} className="w-full">
                                                 <CardContent className="flex flex-row items-center justify-between">
                                                     <div className="flex flex-row items-center gap-x-2">
                                                         <Avatar className="h-12 w-12">

@@ -10,7 +10,7 @@ import NewChatDialog from "@/components/NewChatDialog";
 import NewGroupDialog from "@/components/NewGroupDialog";
 import { useEcho, useEchoPresence } from "@laravel/echo-react";
 
-// Funzione Helper
+// Funzione Helper for avatar initials
 const getAvatarInitials = (entity) => {
     if (!entity) return "??";
     if (entity.name && entity.surname) {
@@ -52,7 +52,7 @@ export default function Chat() {
         ['ChatGroupEvent'],
         (e) => {
             setChats(prev => [e.chat, ...prev]);
-            setSelectedChat(e.chat);
+            //setSelectedChat(e.chat);
         }
     );
 
@@ -64,6 +64,7 @@ export default function Chat() {
         channel.listen(
             'ChatEvent',
             (e) => {
+                console.log(e);
                 if(selectedChat?.id == e.chat_id) {
                     // Aggiornamento chat aperta
                     setMessages(prev => [...prev, e.message]);
@@ -91,7 +92,6 @@ export default function Chat() {
                         }
                         return chat;
                     }));
-                    // PALLINO VERDE CHAT
                 }
             }
         )
@@ -188,11 +188,11 @@ export default function Chat() {
 
     // --- HANDLERS ---
     const handleChatCreated = (chatObj) => {
-        // setChats((prev) => {
-        //     if (prev.find((c) => c.id === chatObj.id)) return prev;
-        //     return [chatObj, ...prev];
-        // });
-        // setSelectedChat(chatObj);
+        setChats((prev) => {
+            if (prev.find((c) => c.id === chatObj.id)) return prev;
+            return [chatObj, ...prev];
+        });
+        setSelectedChat(chatObj);
     };
 
     function sendMessageChat(updater) {
