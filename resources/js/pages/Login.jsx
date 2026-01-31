@@ -26,6 +26,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form";
+import { useEnableCacheLoad } from "@/context/CacheProvider";
 
 const loginSchema = z.object({
     username: z.string().min(1, "Insert Username").max(255),
@@ -36,6 +37,7 @@ export default function Login() {
 
     let navigate = useNavigate();
     const { setUser } = useAuth();
+    const { setEnableCacheLoad } = useEnableCacheLoad();
 
     //setup form
     const form = useForm({
@@ -51,6 +53,32 @@ export default function Login() {
         try {
             let res = await axios.post("spa/login", values);
             setUser(res.data.user);
+
+            (async () => {
+                if ("caches" in window) {
+                    const mPath = "/spa/ai/aimodel";
+                    const CACHE_NAME = "ai-model-cache-v1";
+
+                    const cache = await caches.open(CACHE_NAME);
+                    const cachedResponse = await cache.match(mPath);
+
+                    if (!cachedResponse) {
+                        setEnableCacheLoad(false);
+
+                        const modelResponse = await axios.get(mPath, {
+                        responseType: "arraybuffer",
+                        });
+
+                        const blob = new Blob([modelResponse.data]);
+                        const response = new Response(blob);
+
+                        await cache.put(mPath, response);
+
+                        setEnableCacheLoad(true);
+                        console.log("💾 Model cached successfully!");
+                    }
+                }
+            })();
             navigate("/", { replace: true });
         } catch (error) {
             if (error.response) {
