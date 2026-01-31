@@ -72,7 +72,7 @@ php artisan db:seed
         sail npm run dev
         sail artisan reverb:start
         sail artisan queue:work --queue=high,medium,low
-        php artisan schedule:work
+        sail artisan schedule:work
         ```
         
 2. Senza l'utilizzo di docker:
