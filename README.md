@@ -76,24 +76,15 @@ php artisan db:seed
         ```
         
 2. Senza l'utilizzo di docker:
-   1. Avviare i vari servizzi
+    1. Configurare server python (vedi readme in PythonServer)
+
+    2. Avviare i vari servizzi
     ```bash
     php artisan serve
     npm run dev
     php artisan reverb:start
     php artisan queue:work --queue=high,medium,low
     php artisan schedule:work
+    cd PythonServer
+    uvicorn main:app --host 0.0.0.0 --port 8001 --reload
     ```
-
-
-
-### Commands
-
-```bash
-php artisan serve
-npm run dev
-php artisan reverb:start
-php artisan queue:work --queue=high,medium,low
-php artisan schedule:work
-uvicorn main:app --host 0.0.0.0 --port 8001 --reload
-```

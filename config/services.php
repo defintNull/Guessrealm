@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'python_api' => [
+        'host' => env('PYTHON_API_HOST'),
+        'port' => env('PYTHON_API_PORT'),
+        'url' => 'http://'.env('PYTHON_API_HOST').":".env('PYTHON_API_PORT')."/predict"
+    ],
+
 ];

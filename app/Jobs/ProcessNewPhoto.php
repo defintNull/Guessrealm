@@ -56,7 +56,7 @@ class ProcessNewPhoto implements ShouldQueue
             'file',
             Storage::disk('local')->get($path),
             'filename'
-        )->post("http://localhost:8001/predict");
+        )->post(config('services.python_api.url'));
 
         if (!$analysisResponse->successful()) {
             throw new \Exception("Errore dal servizio ML");

@@ -65,6 +65,19 @@ services:
                 - ping
             retries: 3
             timeout: 5s
+    python-api:
+        build:
+            context: ./PythonServer
+            dockerfile: Dockerfile
+        volumes:
+            - ./PythonServer:/app
+        working_dir: /app
+        command: >
+            uvicorn main:app
+            --host 0.0.0.0
+            --port 8001
+        networks:
+            - sail
 networks:
     sail:
         driver: bridge
