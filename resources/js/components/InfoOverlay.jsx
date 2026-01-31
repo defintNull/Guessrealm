@@ -44,10 +44,11 @@ export default function InfoOverlay() {
             textAnchor="middle"
             dominantBaseline="central"
             fontSize="14"
-            fontFamily="Arial"
+            fontFamily="Chewy"
             fill="white"
             fontWeight="bold"
           >
+
             i
           </text>
         </svg>
