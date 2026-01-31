@@ -57,14 +57,12 @@ export default function Chat() {
     );
 
     useEffect(() => {
-        if (!selectedChat) return;
 
         setMessages([]);
 
         channel.listen(
             'ChatEvent',
             (e) => {
-                console.log(e);
                 if(selectedChat?.id == e.chat_id) {
                     // Aggiornamento chat aperta
                     setMessages(prev => [...prev, e.message]);
@@ -95,6 +93,8 @@ export default function Chat() {
                 }
             }
         )
+
+        if (!selectedChat) return;
 
         typingChannel.current = window.Echo.private('chat.' + selectedChat.id + '.typing');
         typingChannel.current.listenForWhisper('typing', (e) => {
