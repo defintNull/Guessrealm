@@ -303,7 +303,7 @@ export default function Chat() {
                                     <button
                                         key={chat.id}
                                         onClick={() => setSelectedChat(chat)}
-                                        className={`flex items-center gap-3 p-3 rounded-md text-left transition-all hover:bg-accent/50 ${
+                                        className={`flex items-center gap-3 p-3 w-full rounded-md text-left transition-all hover:bg-accent/50 ${
                                             selectedChat?.id === chat.id ? "bg-accent text-accent-foreground" : "text-muted-foreground"
                                         }`}
                                     >
@@ -321,7 +321,7 @@ export default function Chat() {
                                         <div className="flex-1 overflow-hidden">
                                             {/* Riga 1: Nome e Orario */}
                                             <div className="flex justify-between items-baseline">
-                                                <span className={`text-sm font-medium truncate ${selectedChat?.id === chat.id ? "text-foreground" : ""}`}>
+                                                <span className={`text-sm font-medium max-w-20 md:max-w-40 truncate ${selectedChat?.id === chat.id ? "text-foreground" : ""}`}>
                                                     {displayName}
                                                 </span>
                                                 <span className="text-[10px] opacity-70">
@@ -332,7 +332,7 @@ export default function Chat() {
 
                                             {/* Riga 2: Messaggio e Badge Non Letti */}
                                             <div className="flex justify-between items-center mt-0.5">
-                                                <p className={`text-xs truncate opacity-70 flex-1 ${chat.unread > 0 ? 'font-bold text-foreground' : ''}`}>
+                                                <p className={`text-xs max-w-20 md:max-w-40 truncate opacity-70 flex-1 ${chat.unread > 0 ? 'font-bold text-foreground' : ''}`}>
                                                     {chat.latest_message?.content || "Nessun messaggio"}
                                                 </p>
 
