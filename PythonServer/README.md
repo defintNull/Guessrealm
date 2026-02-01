@@ -175,36 +175,6 @@ lsof -i :8002
 uvicorn client_server:app --port 8003
 ```
 
-## Produzione
-
-Per produzione, considera:
-
-1. **Autenticazione**: Aggiungi API keys o JWT tokens
-2. **Rate limiting**: Limita il numero di richieste per utente
-3. **Logging**: Aggiungi logging strutturato
-4. **Monitoring**: Usa Prometheus/Grafana
-5. **HTTPS**: Usa certificati SSL
-6. **Load Balancer**: Nginx o Traefik davanti ai server
-7. **Docker**: Containerizza entrambi i server
-
-Esempio Docker Compose:
-```yaml
-version: '3.8'
-services:
-  inference-server:
-    build: .
-    command: uvicorn main:app --host 0.0.0.0 --port 8001
-    ports:
-      - "8001:8001"
-  
-  client-server:
-    build: .
-    command: uvicorn client_server:app --host 0.0.0.0 --port 8002
-    ports:
-      - "8002:8002"
-    depends_on:
-      - inference-server
-```
 ### Test locale con immagine presente
 ./start_servers.sh  #avvio di entrambi i server
 ./stop_servers.sh   #stop di entrambi i server
