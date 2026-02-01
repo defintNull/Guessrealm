@@ -266,7 +266,7 @@ export default function Lobby() {
             </VisuallyHidden>
             <DialogContent showCloseButton={false}>
                 <div className="flex flex-col items-center justify-center py-4">
-                    <p className="text-4xl font-semibold py-4 text-center">The lobby has being closed!</p>
+                    <p className="text-4xl font-semibold py-4 text-center">The lobby has been closed!</p>
                     <Button size="lg" className="w-1/2 mt-6 cursor-pointer" onClick={dialogLobbyStateClickHandle}>Confirm</Button>
                 </div>
             </DialogContent>
